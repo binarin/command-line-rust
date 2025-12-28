@@ -21,8 +21,11 @@
             rustfmt
 
             # rustic - rust docs in org-mode
+            rustup
             pandoc
-            # cargo-makedocs
+            (writeShellScriptBin "cargo-makedocs" ''
+              exec cargo makedocs "$@"
+            '')
             fd
           ];
         };
