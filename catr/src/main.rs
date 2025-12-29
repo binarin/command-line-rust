@@ -31,8 +31,10 @@ pub fn get_args() -> Args {
         )
         .get_matches();
 
-    let files: Vec<String> = matches.get_many("files").unwrap().cloned().collect();
-
+    let files: Vec<String> = matches
+        .get_many("files")
+        .map(|it| it.cloned().collect())
+        .unwrap_or(vec!["-".to_string()]);
 
     Args{
         files,
