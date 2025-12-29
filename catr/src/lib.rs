@@ -1,4 +1,5 @@
 use std::error::Error;
+use clap::{App, Arg};
 
 type MyResult<T> = Result<T, Box<dyn Error>>;
 
@@ -14,11 +15,29 @@ pub fn get_args() -> MyResult<Config> {
         .version("0.1.0")
         .author("Alexey Lebedeff <learning-rust@binarin.info>")
         .about("Rust cat")
+        .arg(Arg::with_name("number_lines")
+             .short("n")
+             .long("number")
+             .help("number all output lines")
+             .takes_value(false)
+        )
+        .arg(Arg::with_name("number_nonblank_lines")
+             .short("b")
+             .long("number-nonblank")
+             .help("number nonempty output lines, overrides -n")
+             .takes_value(false)
+        )
+        .arg(Arg::with_name("files")
+             .value_name("FILE")
+             .help("With no FILE, or when FILE is -, read standard input.")
+             .min_values(0)
+        )
         .get_matches();
+
     Ok(Config{
-        files: 1,
-        number_lines: false,
-        number_nonblank_lines: false,
+        files: matches.values_of_lossy("files").unwrap_or(vec!()),
+        number_lines: matches.is_present("number_lines"),
+        number_nonblank_lines: matches.is_present("number_lines"),
     })
 }
 
