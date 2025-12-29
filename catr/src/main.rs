@@ -1,6 +1,10 @@
+#[derive(Debug)]
+struct Args {
+    files: Vec<String>,
+    number_lines: bool,
+    number_nonblank_lines: bool,
+}
+
 fn main() {
-    if let Err(e) = catr::get_args().and_then(catr::run) {
-        eprintln!("{}", e);
-        std::process::exit(1);
-    }
+    println!("Hello, world!");
 }
