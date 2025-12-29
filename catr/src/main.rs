@@ -23,6 +23,7 @@ pub fn get_args() -> Args {
              .long("number-nonblank")
              .help("number nonempty output lines, overrides -n")
              .action(ArgAction::SetTrue)
+             .conflicts_with("number_lines")
         )
         .arg(Arg::new("files")
              .value_name("FILE")
