@@ -10,16 +10,17 @@ struct Args {
     files: Vec<String>,
 
     /// Number of lines to print
-    #[arg(value_name("lines"), short('n'), long("lines"), default_value_t = 10)]
+    #[arg(
+        value_name("LINES"),
+        short('n'),
+        long("lines"),
+        default_value_t = 10,
+        conflicts_with("bytes")
+    )]
     lines: u64,
 
     /// Number of bytes to print
-    #[arg(
-        value_name("bytes"),
-        short('c'),
-        long("bytes"),
-        conflicts_with("lines")
-    )]
+    #[arg(value_name("BYTES"), short('c'), long("bytes"))]
     bytes: Option<u64>,
 }
 
