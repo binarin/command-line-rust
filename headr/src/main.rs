@@ -15,6 +15,7 @@ struct Args {
         short('n'),
         long,
         default_value = "10",
+        value_parser = clap::value_parser!(u64).range(1..),
         conflicts_with("bytes")
     )]
     lines: u64,
@@ -24,6 +25,7 @@ struct Args {
         value_name("BYTES"),
         short('c'),
         long,
+        value_parser = clap::value_parser!(u64).range(1..),
     )]
     bytes: Option<u64>,
 }
