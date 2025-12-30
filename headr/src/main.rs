@@ -13,14 +13,18 @@ struct Args {
     #[arg(
         value_name("LINES"),
         short('n'),
-        long("lines"),
-        default_value_t = 10,
+        long,
+        default_value = "10",
         conflicts_with("bytes")
     )]
     lines: u64,
 
     /// Number of bytes to print
-    #[arg(value_name("BYTES"), short('c'), long("bytes"))]
+    #[arg(
+        value_name("BYTES"),
+        short('c'),
+        long,
+    )]
     bytes: Option<u64>,
 }
 
