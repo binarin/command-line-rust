@@ -1,5 +1,5 @@
-use clap::Parser;
 use anyhow::Result;
+use clap::Parser;
 use std::fs::File;
 use std::io::{self, BufRead, BufReader};
 
@@ -23,9 +23,29 @@ struct Args {
 fn run(args: Args) -> Result<()> {
     for filename in args.files {
         match open(&filename) {
-            Err(err) => eprintln!("Failed to open {filename}: {err}"),
-            Ok(_) => println!("Opened {filename}"),
+            Err(err) => {
+                eprintln!("Failed to open {filename}: {err}");
+                ()
+            }
+            Ok(file) => print_file(file, args.number_lines, args.number_nonblank_lines)?,
         }
+    }
+    Ok(())
+}
+
+fn print_file(
+    file: Box<dyn BufRead>,
+    number_lines: bool,
+    number_nonblank_lines: bool,
+) -> Result<()> {
+    let mut ctr: u32 = 1;
+    for line_res in file.lines() {
+        let line = line_res?;
+        if number_lines || (number_nonblank_lines && line != "") {
+            print!("{ctr:6}\t");
+            ctr += 1;
+        }
+        println!("{line}");
     }
     Ok(())
 }
@@ -40,6 +60,6 @@ fn main() {
 fn open(filename: &str) -> Result<Box<dyn BufRead>> {
     match filename {
         "-" => Ok(Box::new(BufReader::new(io::stdin()))),
-        _ => Ok(Box::new(BufReader::new(File::open(filename)?)))
+        _ => Ok(Box::new(BufReader::new(File::open(filename)?))),
     }
 }
