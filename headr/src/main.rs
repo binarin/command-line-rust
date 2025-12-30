@@ -40,7 +40,12 @@ fn main() {
 }
 
 fn run(args: Args) -> Result<()> {
-    dbg!(args);
+    for filename in args.files {
+        match open(&filename) {
+            Err(err) => eprintln!("{filename}: {err}"),
+            Ok(_) => println!("Opened {filename}"),
+        }
+    }
     Ok(())
 }
 
