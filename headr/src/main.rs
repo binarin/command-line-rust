@@ -1,6 +1,5 @@
 use std::{
-    fs::File,
-    io::{self, BufRead, BufReader},
+    fs::File, io::{self, BufRead, BufReader, Write}
 };
 
 use anyhow::Result;
@@ -53,13 +52,42 @@ fn run(args: Args) -> Result<()> {
         }
         match open(&filename) {
             Err(err) => eprintln!("{filename}: {err}"),
-            Ok(file) => process_file(file, args.lines, args.bytes).unwrap_or(()),
+            Ok(file) => match args.bytes {
+                None => process_lines(file, args.lines).unwrap_or(()),
+                Some(bytes) => process_bytes(file, bytes).unwrap_or(()),
+            },
         }
     }
     Ok(())
 }
 
-fn process_file(mut file: Box<dyn BufRead>, mut lines: u64, bytes: Option<u64>) -> Result<()> {
+fn process_bytes(mut file: Box<dyn BufRead + 'static>, bytes: u64) -> Result<()>{
+    let mut bytes = bytes as usize;
+    let mut stdout = io::stdout().lock();
+    loop {
+        assert!(bytes > 0);
+        let buf = file.fill_buf()?;
+
+        let bytes_read: usize = buf.len();
+
+        if bytes_read == 0 {
+            break;
+        }
+
+        if bytes <= bytes_read {
+            stdout.write(&buf[0..bytes])?;
+            break;
+        }
+
+        stdout.write(&buf)?;
+        bytes -= bytes_read;
+
+        file.consume(bytes_read);
+    }
+    Ok(())
+}
+
+fn process_lines(mut file: Box<dyn BufRead>, mut lines: u64) -> Result<()> {
     while lines > 0 {
         let mut s = String::new();
         let bytes_read = file.read_line(&mut s)?;
