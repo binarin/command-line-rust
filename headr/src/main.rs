@@ -1,4 +1,7 @@
-use std::{fs::File, io::{self, BufRead, BufReader}};
+use std::{
+    fs::File,
+    io::{self, BufRead, BufReader},
+};
 
 use anyhow::Result;
 use clap::Parser;
@@ -40,11 +43,31 @@ fn main() {
 }
 
 fn run(args: Args) -> Result<()> {
-    for filename in args.files {
+    let multifile = args.files.len() > 1;
+    for (file_no, filename) in args.files.iter().enumerate() {
+        if multifile {
+            if file_no > 0 {
+                print!("\n");
+            }
+            println!("==> {filename} <==");
+        }
         match open(&filename) {
             Err(err) => eprintln!("{filename}: {err}"),
-            Ok(_) => println!("Opened {filename}"),
+            Ok(file) => process_file(file, args.lines, args.bytes).unwrap_or(()),
         }
+    }
+    Ok(())
+}
+
+fn process_file(mut file: Box<dyn BufRead>, mut lines: u64, bytes: Option<u64>) -> Result<()> {
+    while lines > 0 {
+        let mut s = String::new();
+        let bytes_read = file.read_line(&mut s)?;
+        if bytes_read == 0 {
+            break;
+        }
+        print!("{s}");
+        lines -= 1;
     }
     Ok(())
 }
