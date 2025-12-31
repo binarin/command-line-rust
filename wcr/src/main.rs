@@ -27,7 +27,10 @@ struct Args {
 }
 
 fn main() {
-    run(Args::parse()).unwrap_or_else(|err| eprintln!("{err}"))
+    run(Args::parse()).unwrap_or_else(|err| {
+        eprintln!("{err}");
+        std::process::exit(1);
+    });
 }
 
 fn run(args: Args) -> Result<()> {
