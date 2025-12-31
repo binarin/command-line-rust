@@ -1,5 +1,6 @@
 use std::{
-    fs::File, io::{self, BufRead, BufReader, Write}
+    fs::File,
+    io::{self, BufRead, BufReader, Write},
 };
 
 use anyhow::Result;
@@ -50,18 +51,22 @@ fn run(args: Args) -> Result<()> {
             }
             println!("==> {filename} <==");
         }
-        match open(&filename) {
-            Err(err) => eprintln!("{filename}: {err}"),
-            Ok(file) => match args.bytes {
-                None => process_lines(file, args.lines),
-                Some(bytes) => process_bytes(file, bytes),
-            }.unwrap_or_else(|err| eprintln!("{filename}: {err}")),
-        }
+        open(&filename)
+            .and_then(|file| process_file(file, args.lines, args.bytes))
+            .unwrap_or_else(|err| eprintln!("{filename}: {err}"));
     }
     Ok(())
 }
 
-fn process_bytes(mut file: Box<dyn BufRead + 'static>, bytes: u64) -> Result<()>{
+fn process_file(file: Box<dyn BufRead>, lines: u64, bytes: Option<u64>) -> Result<()> {
+    if let Some(bytes) = bytes {
+        process_bytes(file, bytes)
+    } else {
+        process_lines(file, lines)
+    }
+}
+
+fn process_bytes(mut file: Box<dyn BufRead>, bytes: u64) -> Result<()> {
     let mut bytes = bytes as usize;
     let mut stdout = io::stdout().lock();
     loop {
