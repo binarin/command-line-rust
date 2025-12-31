@@ -1,8 +1,8 @@
 use anyhow::Result;
-use assert_cmd::Command;
+use assert_cmd::cargo::cargo_bin_cmd;
 use predicates::prelude::*;
 use pretty_assertions::assert_eq;
-use rand::{distributions::Alphanumeric, Rng};
+use rand::{Rng, distributions::Alphanumeric};
 use std::fs;
 use tempfile::NamedTempFile;
 
@@ -11,8 +11,6 @@ struct Test {
     out: &'static str,
     out_count: &'static str,
 }
-
-const PRG: &str = "uniqr";
 
 const EMPTY: Test = Test {
     input: "tests/inputs/empty.txt",
@@ -100,7 +98,7 @@ fn gen_bad_file() -> String {
 fn dies_bad_file() -> Result<()> {
     let bad = gen_bad_file();
     let expected = format!("{bad}: .* [(]os error 2[)]");
-    Command::cargo_bin(PRG)?
+    cargo_bin_cmd!()
         .arg(bad)
         .assert()
         .failure()
@@ -112,10 +110,7 @@ fn dies_bad_file() -> Result<()> {
 // HELPER FUNCTIONS
 fn run(test: &Test) -> Result<()> {
     let expected = fs::read_to_string(test.out)?;
-    let output = Command::cargo_bin(PRG)?
-        .arg(test.input)
-        .output()
-        .expect("fail");
+    let output = cargo_bin_cmd!().arg(test.input).output().expect("fail");
     assert!(output.status.success());
 
     let stdout = String::from_utf8(output.stdout).expect("invalid UTF-8");
@@ -126,7 +121,7 @@ fn run(test: &Test) -> Result<()> {
 // --------------------------------------------------
 fn run_count(test: &Test) -> Result<()> {
     let expected = fs::read_to_string(test.out_count)?;
-    let output = Command::cargo_bin(PRG)?
+    let output = cargo_bin_cmd!()
         .args([test.input, "-c"])
         .output()
         .expect("fail");
@@ -141,10 +136,7 @@ fn run_count(test: &Test) -> Result<()> {
 fn run_stdin(test: &Test) -> Result<()> {
     let input = fs::read_to_string(test.input)?;
     let expected = fs::read_to_string(test.out)?;
-    let output = Command::cargo_bin(PRG)?
-        .write_stdin(input)
-        .output()
-        .expect("fail");
+    let output = cargo_bin_cmd!().write_stdin(input).output().expect("fail");
     assert!(output.status.success());
 
     let stdout = String::from_utf8(output.stdout).expect("invalid UTF-8");
@@ -156,7 +148,7 @@ fn run_stdin(test: &Test) -> Result<()> {
 fn run_stdin_count(test: &Test) -> Result<()> {
     let input = fs::read_to_string(test.input)?;
     let expected = fs::read_to_string(test.out_count)?;
-    let output = Command::cargo_bin(PRG)?
+    let output = cargo_bin_cmd!()
         .arg("--count")
         .write_stdin(input)
         .output()
@@ -174,7 +166,7 @@ fn run_outfile(test: &Test) -> Result<()> {
     let outfile = NamedTempFile::new()?;
     let outpath = &outfile.path().to_str().unwrap();
 
-    Command::cargo_bin(PRG)?
+    cargo_bin_cmd!()
         .args([test.input, outpath])
         .assert()
         .success()
@@ -190,7 +182,7 @@ fn run_outfile_count(test: &Test) -> Result<()> {
     let outfile = NamedTempFile::new()?;
     let outpath = &outfile.path().to_str().unwrap();
 
-    Command::cargo_bin(PRG)?
+    cargo_bin_cmd!()
         .args([test.input, outpath, "--count"])
         .assert()
         .success()
@@ -209,7 +201,7 @@ fn run_stdin_outfile_count(test: &Test) -> Result<()> {
     let outfile = NamedTempFile::new()?;
     let outpath = &outfile.path().to_str().unwrap();
 
-    Command::cargo_bin(PRG)?
+    cargo_bin_cmd!()
         .args(["-", outpath, "-c"])
         .write_stdin(input)
         .assert()
