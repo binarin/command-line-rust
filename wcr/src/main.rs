@@ -1,4 +1,6 @@
 use clap::Parser;
+use std::{fs::File, io::{BufRead, BufReader}};
+
 use anyhow::Result;
 
 #[derive(Debug, Parser)]
@@ -48,4 +50,11 @@ fn parse_args() -> Args {
         args.bytes = true;
     }
     args
+}
+
+fn open(filename: &str) -> Result<Box<dyn BufRead>> {
+    match filename {
+        "-" => Ok(Box::new(BufReader::new(std::io::stdin()))),
+        _ => Ok(Box::new(BufReader::new(File::open(filename)?))),
+    }
 }
