@@ -28,6 +28,14 @@ struct Args {
     chars: bool,
 }
 
+#[derive(Debug, PartialEq, Default)]
+struct FileInfo {
+    num_lines: usize,
+    num_words: usize,
+    num_bytes: usize,
+    num_chars: usize,
+}
+
 fn main() {
     run(parse_args()).unwrap_or_else(|err| {
         eprintln!("{err}");
@@ -36,8 +44,20 @@ fn main() {
 }
 
 fn run(args: Args) -> Result<()> {
-    dbg!(args);
+    for filename in &args.files {
+        match open(&filename) {
+            Ok(file) => {
+                count(file, &args);
+                ()
+            }
+            Err(err) => eprintln!("{err}"),
+        }
+    }
     Ok(())
+}
+
+fn count(file: Box<dyn BufRead>, args: &Args) -> FileInfo {
+    FileInfo::default()
 }
 
 fn parse_args() -> Args {
