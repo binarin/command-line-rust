@@ -21,7 +21,7 @@ struct Args {
     /// print the bytes count
     bytes: bool,
 
-    #[arg(short('m'), long, default_value_t = true)]
+    #[arg(short('m'), long, default_value_t = false, conflicts_with("bytes"))]
     /// print the characters count
     chars: bool,
 }
