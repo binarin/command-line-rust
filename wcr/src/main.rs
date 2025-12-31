@@ -1,13 +1,13 @@
-use clap::Parser;
 use std::{fs::File, io::{BufRead, BufReader}};
 
 use anyhow::Result;
+use clap::Parser;
 
 #[derive(Debug, Parser)]
 #[command(author, version, about)]
 /// ‘wc’ in Rust
 struct Args {
-    #[arg(value_name="FILE", default_value="-")]
+    #[arg(value_name = "FILE", default_value = "-")]
     /// filenames (or ‘-’ for stdin)
     files: Vec<String>,
 
@@ -44,7 +44,10 @@ fn parse_args() -> Args {
     let mut args = Args::parse();
 
     // none of the explicit args is present
-    if [args.lines, args.words, args.bytes, args.chars].iter().all(|v| !v) {
+    if [args.lines, args.words, args.bytes, args.chars]
+        .iter()
+        .all(|v| !v)
+    {
         args.lines = true;
         args.words = true;
         args.bytes = true;

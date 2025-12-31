@@ -2,7 +2,7 @@ use anyhow::Result;
 use assert_cmd::cargo::cargo_bin_cmd;
 use predicates::prelude::*;
 use pretty_assertions::assert_eq;
-use rand::{distributions::Alphanumeric, Rng};
+use rand::{Rng, distributions::Alphanumeric};
 use std::fs;
 
 const EMPTY: &str = "tests/inputs/empty.txt";
@@ -162,13 +162,9 @@ fn atlamal_bytes_lines() -> Result<()> {
 #[test]
 fn atlamal_stdin() -> Result<()> {
     let input = fs::read_to_string(ATLAMAL)?;
-    let expected =
-        fs::read_to_string("tests/expected/atlamal.txt.stdin.out")?;
+    let expected = fs::read_to_string("tests/expected/atlamal.txt.stdin.out")?;
 
-    let output = cargo_bin_cmd!()
-        .write_stdin(input)
-        .output()
-        .expect("fail");
+    let output = cargo_bin_cmd!().write_stdin(input).output().expect("fail");
     assert!(output.status.success());
 
     let stdout = String::from_utf8(output.stdout).expect("invalid UTF-8");
