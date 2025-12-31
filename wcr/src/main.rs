@@ -65,9 +65,7 @@ fn run(args: Args) -> Result<()> {
                 println!("{}{}", render_file_info(&fi, &args), filename_part);
                 Ok(())
             })
-            .unwrap_or_else(|err| {
-                eprintln!("{filename}: {err}")
-            });
+            .unwrap_or_else(|err| eprintln!("{filename}: {err}"));
     }
     if args.files.len() > 1 {
         println!("{}{}", render_file_info(&totals, &args), " total");
@@ -169,6 +167,12 @@ mod tests {
 
     #[test]
     fn test_count() {
-        assert_count_string("I don't want the world.\nI just want your half.\r\n", 2, 10, 48, 48);
+        assert_count_string(
+            "I don't want the world.\nI just want your half.\r\n",
+            2,
+            10,
+            48,
+            48,
+        );
     }
 }
