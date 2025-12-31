@@ -47,16 +47,49 @@ fn main() {
 }
 
 fn run(args: Args) -> Result<()> {
+    let mut totals = FileInfo::default();
+
     for filename in &args.files {
-        match open(&filename) {
-            Ok(file) => {
-                let _ = count(file);
-                ()
-            }
-            Err(err) => eprintln!("{err}"),
-        }
+        open(&filename)
+            .and_then(|file| {
+                let fi = count(file)?;
+                totals.num_lines += fi.num_lines;
+                totals.num_words += fi.num_words;
+                totals.num_bytes += fi.num_bytes;
+                totals.num_chars += fi.num_chars;
+                let filename_part: String = if filename == "-" && args.files.len() == 1 {
+                    "".to_string()
+                } else {
+                    " ".to_string() + filename
+                };
+                println!("{}{}", render_file_info(&fi, &args), filename_part);
+                Ok(())
+            })
+            .unwrap_or_else(|err| {
+                eprintln!("{filename}: {err}")
+            });
+    }
+    if args.files.len() > 1 {
+        println!("{}{}", render_file_info(&totals, &args), " total");
     }
     Ok(())
+}
+
+fn render_file_info(fi: &FileInfo, args: &Args) -> String {
+    let mut ret = " ".to_string();
+    if args.lines {
+        ret += &format!("{:>7} ", fi.num_lines).to_string();
+    }
+    if args.words {
+        ret += &format!("{:>7} ", fi.num_words).to_string();
+    }
+    if args.chars {
+        ret += &format!("{:>7} ", fi.num_chars).to_string();
+    }
+    if args.bytes {
+        ret += &format!("{:>7} ", fi.num_bytes).to_string();
+    }
+    ret.trim_end().to_string()
 }
 
 fn count(mut file: impl BufRead) -> Result<FileInfo> {
