@@ -1,4 +1,7 @@
-use std::{fs::File, io::{BufRead, BufReader}};
+use std::{
+    fs::File,
+    io::{BufRead, BufReader},
+};
 
 use anyhow::Result;
 use clap::Parser;
@@ -47,7 +50,7 @@ fn run(args: Args) -> Result<()> {
     for filename in &args.files {
         match open(&filename) {
             Ok(file) => {
-                count(file, &args);
+                let _ = count(file);
                 ()
             }
             Err(err) => eprintln!("{err}"),
@@ -56,8 +59,28 @@ fn run(args: Args) -> Result<()> {
     Ok(())
 }
 
-fn count(file: Box<dyn BufRead>, args: &Args) -> FileInfo {
-    FileInfo::default()
+fn count(mut file: impl BufRead) -> Result<FileInfo> {
+    let mut num_lines = 0;
+    let mut num_words = 0;
+    let mut num_chars = 0;
+    let mut num_bytes = 0;
+    loop {
+        let mut buf = String::new();
+        let bytes_read = file.read_line(&mut buf)?;
+        if bytes_read == 0 {
+            break;
+        }
+        num_words += buf.split_ascii_whitespace().count();
+        num_lines += 1;
+        num_chars += buf.len();
+        num_bytes += buf.as_bytes().len();
+    }
+    Ok(FileInfo {
+        num_lines,
+        num_words,
+        num_chars,
+        num_bytes,
+    })
 }
 
 fn parse_args() -> Args {
@@ -79,5 +102,40 @@ fn open(filename: &str) -> Result<Box<dyn BufRead>> {
     match filename {
         "-" => Ok(Box::new(BufReader::new(std::io::stdin()))),
         _ => Ok(Box::new(BufReader::new(File::open(filename)?))),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{FileInfo, count};
+    use pretty_assertions::assert_eq;
+    use std::io::Cursor;
+
+    fn assert_count_string(
+        s: &str,
+        num_lines: usize,
+        num_words: usize,
+        num_chars: usize,
+        num_bytes: usize,
+    ) {
+        let info = count(Cursor::new(s));
+        assert!(info.is_ok());
+        let expected = FileInfo {
+            num_lines,
+            num_words,
+            num_chars,
+            num_bytes,
+        };
+        assert_eq!(info.unwrap(), expected);
+    }
+
+    #[test]
+    fn test_count_empty() {
+        assert_count_string("", 0, 0, 0, 0);
+    }
+
+    #[test]
+    fn test_count() {
+        assert_count_string("I don't want the world.\nI just want your half.\r\n", 2, 10, 48, 48);
     }
 }
