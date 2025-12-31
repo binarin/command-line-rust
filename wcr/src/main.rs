@@ -101,10 +101,10 @@ fn count(mut file: impl BufRead) -> Result<FileInfo> {
         if bytes_read == 0 {
             break;
         }
-        num_words += buf.split_ascii_whitespace().count();
+        num_words += buf.split_whitespace().count();
         num_lines += 1;
-        num_chars += buf.len();
-        num_bytes += buf.as_bytes().len();
+        num_chars += buf.chars().count();
+        num_bytes += bytes_read;
     }
     Ok(FileInfo {
         num_lines,
