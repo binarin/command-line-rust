@@ -53,9 +53,9 @@ fn run(args: Args) -> Result<()> {
         match open(&filename) {
             Err(err) => eprintln!("{filename}: {err}"),
             Ok(file) => match args.bytes {
-                None => process_lines(file, args.lines).unwrap_or(()),
-                Some(bytes) => process_bytes(file, bytes).unwrap_or(()),
-            },
+                None => process_lines(file, args.lines),
+                Some(bytes) => process_bytes(file, bytes),
+            }.unwrap_or_else(|err| eprintln!("{filename}: {err}")),
         }
     }
     Ok(())
