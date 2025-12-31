@@ -42,7 +42,7 @@ fn parse_args() -> Args {
     let mut args = Args::parse();
 
     // none of the explicit args is present
-    if !(args.lines || args.words || args.bytes || args.chars) {
+    if [args.lines, args.words, args.bytes, args.chars].iter().all(|v| !v) {
         args.lines = true;
         args.words = true;
         args.bytes = true;
