@@ -25,11 +25,13 @@ struct Args {
     count: bool,
 }
 
-fn main() {
-    run(Args::parse()).unwrap_or_else(|err| {
+fn main() -> std::process::ExitCode {
+    if let Err(err) = run(Args::parse()) {
         eprintln!("{err}");
-        std::process::exit(1);
-    });
+        std::process::ExitCode::FAILURE
+    } else {
+        std::process::ExitCode::SUCCESS
+    }
 }
 
 fn write_line(
