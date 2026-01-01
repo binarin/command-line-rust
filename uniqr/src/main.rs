@@ -45,7 +45,7 @@ fn write_line(
 
 fn run(args: Args) -> Result<()> {
     let file = open_input_file(&args.in_file).map_err(|err| anyhow!("{}: {err}", args.in_file))?;
-    let mut out = open_output_file(&args)?;
+    let mut out = open_output_file(&args.out_file)?;
 
     let mut previous: Option<(String, usize)> = None;
 
@@ -69,8 +69,8 @@ fn run(args: Args) -> Result<()> {
     Ok(())
 }
 
-fn open_output_file(args: &Args) -> Result<Box<dyn Write>> {
-    match &args.out_file {
+fn open_output_file(out_file: &Option<String>) -> Result<Box<dyn Write>> {
+    match out_file {
         Some(filename) => Ok(Box::new(BufWriter::new(File::create(filename)?))),
         None => Ok(Box::new(BufWriter::new(std::io::stdout()))),
     }
