@@ -29,52 +29,49 @@ fn main() {
     });
 }
 
+fn write_line(out: &mut Box<dyn Write>, line: &str, count: usize, show_count: bool) -> Result<()> {
+    if show_count {
+        write!(out, "{count:>7} {line}\n")?;
+    } else {
+        write!(out, "{line}\n")?;
+    }
+    Ok(())
+}
+
 fn run(args: Args) -> Result<()> {
     let file = open(&args.in_file).map_err(|err| anyhow!("{}: {err}", args.in_file))?;
     let mut out = open_out_file(&args)?;
 
-    let mut prev_line = String::new();
-    // It will be ‘0’ at start of every unique group
-    let mut prev_count = 0;
+    let mut previous: Option<(String, usize)> = None;
 
     for line_result in file.lines() {
         let line = line_result?;
 
-        if prev_count > 0 {
-            if line == prev_line {
-                prev_count += 1;
-            } else {
-                if args.count {
-                    write!(out, "{prev_count:>7} {prev_line}\n")?;
-                } else {
-                    write!(out, "{prev_line}\n")?;
-                }
-                prev_count = 0; // Make code below start the new unique group
-            }
-        }
-
-        if prev_count == 0 {
-            prev_line = line;
-            prev_count = 1;
+        match &mut previous {
+            Some((prev_line, prev_count)) if *prev_line == line => {
+                *prev_count += 1;
+            },
+            Some((prev_line, prev_count)) => {
+                write_line(&mut out, &prev_line, *prev_count, args.count)?;
+                previous = Some((line, 1));
+            },
+            None => {
+                previous = Some((line, 1));
+            },
         }
     }
 
-    if prev_count > 0 {
-        if args.count {
-            write!(out, "{prev_count:>7} {prev_line}\n")?;
-        } else {
-            write!(out, "{prev_line}\n")?;
-        }
+    if let Some((line, count)) = previous {
+        write_line(&mut out, &line, count, args.count)?;
     }
 
     Ok(())
 }
 
 fn open_out_file(args: &Args) -> Result<Box<dyn Write>> {
-    if let Some(filename) = &args.out_file {
-        return Ok(Box::new(File::create(filename)?));
-    } else {
-        return Ok(Box::new(std::io::stdout()));
+    match &args.out_file {
+        Some(filename) => Ok(Box::new(File::create(filename)?)),
+        None => Ok(Box::new(std::io::stdout())),
     }
 }
 
