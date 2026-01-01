@@ -47,18 +47,14 @@ fn run(args: Args) -> Result<()> {
     for line_result in file.lines() {
         let line = line_result?;
 
-        match &mut previous {
-            Some((prev_line, prev_count)) if *prev_line == line => {
+        if let Some((prev_line, prev_count)) = &mut previous {
+            if prev_line == &line {
                 *prev_count += 1;
-            },
-            Some((prev_line, prev_count)) => {
-                write_line(&mut out, &prev_line, *prev_count, args.count)?;
-                previous = Some((line, 1));
-            },
-            None => {
-                previous = Some((line, 1));
-            },
+                continue;
+            }
+            write_line(out.as_mut(), prev_line, *prev_count, args.count)?;
         }
+        previous = Some((line, 1));
     }
 
     if let Some((line, count)) = previous {
