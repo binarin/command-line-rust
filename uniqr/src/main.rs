@@ -3,8 +3,8 @@ use std::{
     io::{self, BufRead, BufReader, Write},
 };
 
-use anyhow::Result;
-use anyhow::anyhow;
+use anyhow::{Result, anyhow};
+
 use clap::Parser;
 
 #[derive(Debug, Parser)]
@@ -29,11 +29,16 @@ fn main() {
     });
 }
 
-fn write_line(out: &mut Box<dyn Write>, line: &str, count: usize, show_count: bool) -> Result<()> {
+fn write_line(
+    out: &mut dyn std::io::Write,
+    line: &str,
+    count: usize,
+    show_count: bool,
+) -> Result<()> {
     if show_count {
-        write!(out, "{count:>7} {line}\n")?;
+        writeln!(out, "{count:>7} {line}")?;
     } else {
-        write!(out, "{line}\n")?;
+        writeln!(out, "{line}")?;
     }
     Ok(())
 }
