@@ -30,58 +30,43 @@ fn main() {
 }
 
 fn run(args: Args) -> Result<()> {
-    let mut file = open(&args.in_file).map_err(|err| anyhow!("{}: {err}", args.in_file))?;
-
+    let file = open(&args.in_file).map_err(|err| anyhow!("{}: {err}", args.in_file))?;
     let mut out = open_out_file(&args)?;
 
-    let mut prev_line: Option<Vec<u8>> = None;
-    let mut prev_eol: Vec<u8> = vec!();
-    let mut prev_count = 1;
+    let mut prev_line = String::new();
+    // It will be ‘0’ at start of every unique group
+    let mut prev_count = 0;
 
-    loop {
-        let mut line = String::new();
-        let bytes_read = file.read_line(&mut line)?;
+    for line_result in file.lines() {
+        let line = line_result?;
 
-        if bytes_read == 0 {
-            break;
-        }
-
-        let eol_byte_count = line
-            .bytes()
-            .rev()
-            .take_while(|c| *c == b'\n' || *c == b'\r')
-            .count();
-        let line_bytes = line.as_bytes();
-        let line_without_eol = &line_bytes[0..line.len() - eol_byte_count];
-
-        if let Some(ref pl) = prev_line {
-            if pl == line_without_eol {
+        if prev_count > 0 {
+            if line == prev_line {
                 prev_count += 1;
             } else {
                 if args.count {
-                    out.write(format!("{:>4} ", prev_count).as_bytes())?;
+                    write!(out, "{prev_count:>7} {prev_line}\n")?;
+                } else {
+                    write!(out, "{prev_line}\n")?;
                 }
-                out.write(&pl)?;
-                out.write(&prev_eol)?;
-
-                prev_line = None;
+                prev_count = 0; // Make code below start the new unique group
             }
         }
 
-        if prev_line.is_none() {
-            prev_line = Some(line_without_eol.to_vec());
-            prev_eol = line_bytes[(line.len() - eol_byte_count)..].to_vec();
+        if prev_count == 0 {
+            prev_line = line;
             prev_count = 1;
         }
     }
 
-    if let Some(prev_line) = prev_line {
+    if prev_count > 0 {
         if args.count {
-            out.write(format!("{:>4} ", prev_count).as_bytes())?;
+            write!(out, "{prev_count:>7} {prev_line}\n")?;
+        } else {
+            write!(out, "{prev_line}\n")?;
         }
-        out.write(&prev_line)?;
-        out.write(&prev_eol)?;
     }
+
     Ok(())
 }
 
