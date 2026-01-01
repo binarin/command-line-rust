@@ -1,6 +1,6 @@
 use std::{
     fs::File,
-    io::{self, BufRead, BufReader, Write},
+    io::{self, BufRead, BufReader, BufWriter, Write},
 };
 
 use anyhow::{Result, anyhow};
@@ -74,8 +74,8 @@ fn run(args: Args) -> Result<()> {
 
 fn open_output_file(args: &Args) -> Result<Box<dyn Write>> {
     match &args.out_file {
-        Some(filename) => Ok(Box::new(File::create(filename)?)),
-        None => Ok(Box::new(std::io::stdout())),
+        Some(filename) => Ok(Box::new(BufWriter::new(File::create(filename)?))),
+        None => Ok(Box::new(BufWriter::new(std::io::stdout()))),
     }
 }
 
