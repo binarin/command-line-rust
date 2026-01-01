@@ -25,13 +25,8 @@ struct Args {
     count: bool,
 }
 
-fn main() -> std::process::ExitCode {
-    if let Err(err) = run(Args::parse()) {
-        eprintln!("{err}");
-        std::process::ExitCode::FAILURE
-    } else {
-        std::process::ExitCode::SUCCESS
-    }
+fn main() -> Result<()> {
+    run(Args::parse())
 }
 
 fn write_line(
