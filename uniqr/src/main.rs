@@ -10,9 +10,9 @@ use clap::Parser;
 // As in GNU uniq
 const COUNT_FIELD_WIDTH: usize = 7;
 
+/// ‘uniq’ in Rust - omit repeated lines
 #[derive(Debug, Parser)]
 #[command(author, version, about)]
-/// ‘uniq’ in Rust - omit repeated lines
 struct Args {
     #[arg(value_name("INPUT"), default_value = "-")]
     in_file: String,
@@ -20,8 +20,8 @@ struct Args {
     #[arg(value_name("OUTPUT"))]
     out_file: Option<String>,
 
-    #[arg(short, long)]
     /// prefix lines by the number of occurences
+    #[arg(short, long)]
     count: bool,
 }
 
