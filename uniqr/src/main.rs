@@ -7,6 +7,9 @@ use anyhow::{Result, anyhow};
 
 use clap::Parser;
 
+// As in GNU uniq
+const COUNT_FIELD_WIDTH: usize = 7;
+
 #[derive(Debug, Parser)]
 #[command(author, version, about)]
 /// ‘uniq’ in Rust - omit repeated lines
@@ -36,7 +39,7 @@ fn write_line(
     show_count: bool,
 ) -> Result<()> {
     if show_count {
-        writeln!(out, "{count:>7} {line}")?;
+        writeln!(out, "{count:>width$} {line}", width = COUNT_FIELD_WIDTH)?;
     } else {
         writeln!(out, "{line}")?;
     }
