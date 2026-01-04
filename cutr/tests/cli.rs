@@ -1,11 +1,10 @@
 use anyhow::Result;
-use assert_cmd::Command;
+use assert_cmd::cargo::cargo_bin_cmd;
 use predicates::prelude::*;
 use pretty_assertions::assert_eq;
 use rand::{distributions::Alphanumeric, Rng};
 use std::fs;
 
-const PRG: &str = "cutr";
 const CSV: &str = "tests/inputs/movies1.csv";
 const TSV: &str = "tests/inputs/movies1.tsv";
 const BOOKS: &str = "tests/inputs/books.tsv";
@@ -34,7 +33,7 @@ fn gen_bad_file() -> String {
 fn skips_bad_file() -> Result<()> {
     let bad = gen_bad_file();
     let expected = format!("{bad}: .* [(]os error 2[)]");
-    Command::cargo_bin(PRG)?
+    cargo_bin_cmd!()
         .args(["-f", "1", CSV, &bad, TSV])
         .assert()
         .success()
@@ -44,7 +43,7 @@ fn skips_bad_file() -> Result<()> {
 
 // --------------------------------------------------
 fn dies(args: &[&str], expected: &str) -> Result<()> {
-    Command::cargo_bin(PRG)?
+    cargo_bin_cmd!()
         .args(args)
         .assert()
         .failure()
@@ -113,7 +112,7 @@ fn dies_bad_delimiter() -> Result<()> {
 // --------------------------------------------------
 #[test]
 fn dies_chars_bytes_fields() -> Result<()> {
-    Command::cargo_bin(PRG)?
+    cargo_bin_cmd!()
         .args([CSV, "-c", "1", "-f", "1", "-b", "1"])
         .assert()
         .failure();
@@ -123,7 +122,7 @@ fn dies_chars_bytes_fields() -> Result<()> {
 // --------------------------------------------------
 #[test]
 fn dies_bytes_fields() -> Result<()> {
-    Command::cargo_bin(PRG)?
+    cargo_bin_cmd!()
         .args([CSV, "-f", "1", "-b", "1"])
         .assert()
         .failure();
@@ -133,7 +132,7 @@ fn dies_bytes_fields() -> Result<()> {
 // --------------------------------------------------
 #[test]
 fn dies_chars_fields() -> Result<()> {
-    Command::cargo_bin(PRG)?
+    cargo_bin_cmd!()
         .args([CSV, "-c", "1", "-f", "1"])
         .assert()
         .failure();
@@ -143,7 +142,7 @@ fn dies_chars_fields() -> Result<()> {
 // --------------------------------------------------
 #[test]
 fn dies_chars_bytes() -> Result<()> {
-    Command::cargo_bin(PRG)?
+    cargo_bin_cmd!()
         .args([CSV, "-c", "1", "-b", "1"])
         .assert()
         .failure();
@@ -153,7 +152,7 @@ fn dies_chars_bytes() -> Result<()> {
 // --------------------------------------------------
 fn run(args: &[&str], expected_file: &str) -> Result<()> {
     let expected = fs::read_to_string(expected_file)?;
-    let output = Command::cargo_bin(PRG)?.args(args).output().expect("fail");
+    let output = cargo_bin_cmd!().args(args).output().expect("fail");
     assert!(output.status.success());
 
     let stdout = String::from_utf8(output.stdout).expect("invalid UTF-8");
@@ -165,7 +164,7 @@ fn run(args: &[&str], expected_file: &str) -> Result<()> {
 fn run_lossy(args: &[&str], expected_file: &str) -> Result<()> {
     let contents = fs::read(expected_file)?;
     let expected = String::from_utf8_lossy(&contents);
-    let output = Command::cargo_bin(PRG)?.args(args).output().expect("fail");
+    let output = cargo_bin_cmd!().args(args).output().expect("fail");
     assert!(output.status.success());
 
     let stdout = String::from_utf8(output.stdout).expect("invalid UTF-8");
