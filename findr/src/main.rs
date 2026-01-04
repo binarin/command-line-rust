@@ -1,6 +1,7 @@
 use anyhow::Result;
 use clap::{Parser, ValueEnum, builder::PossibleValue};
 use regex::Regex;
+use walkdir::WalkDir;
 
 /// ‘find’ implementation in Rust
 #[derive(Debug, Parser)]
@@ -41,6 +42,14 @@ impl ValueEnum for EntryType {
 }
 
 fn main() -> Result<()> {
-    dbg!(Args::parse());
+    let args = Args::parse();
+    for path in args.paths {
+        for entry in WalkDir::new(path) {
+            match entry {
+                Ok(entry) => println!("{}", entry.path().display()),
+                Err(err) => eprint!("{err}"),
+            }
+        }
+    }
     Ok(())
 }
