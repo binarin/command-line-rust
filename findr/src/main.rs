@@ -1,6 +1,6 @@
 use std::fs::Metadata;
 
-use anyhow::Result;
+use anyhow::{Result, anyhow};
 use clap::{Parser, ValueEnum, builder::PossibleValue};
 use regex::Regex;
 use walkdir::WalkDir;
@@ -14,12 +14,12 @@ struct Args {
     paths: Vec<String>,
 
     /// Expressions
-    #[arg(default_value = ".", value_name = "expression", long("name"), short('n'), num_args(0..))]
-    names: Vec<Regex>,
+    #[arg(value_name = "expression", long("name"), short('n'), num_args(0..))]
+    names: Option<Vec<Regex>>,
 
     /// File types
     #[arg(long("type"), short('t'), value_name("TYPE"), num_args(0..))]
-    entry_types: Vec<EntryType>,
+    entry_types: Option<Vec<EntryType>>,
 }
 
 #[derive(Debug, Eq, PartialEq, Clone)]
@@ -50,7 +50,11 @@ fn main() -> Result<()> {
             match entry {
                 Ok(entry) => {
                     let metadata = entry.metadata()?;
-                    if select_type(&metadata, &args.entry_types) {
+                    let path = entry
+                        .path()
+                        .to_str()
+                        .ok_or_else(|| anyhow!("Can't convert path {:?} to str", entry.path()))?;
+                    if select_type(&metadata, &args.entry_types) && select_name(path, &args.names) {
                         println!("{}", entry.path().display());
                     }
                 }
@@ -61,25 +65,30 @@ fn main() -> Result<()> {
     Ok(())
 }
 
-fn select_type(metadata: &Metadata, types: &Vec<EntryType>) -> bool {
-    if types.len() == 0 {
-        return true;
+fn select_name(path: &str, regexes: &Option<Vec<Regex>>) -> bool {
+    match regexes {
+        None => return true,
+        Some(regexes) => {
+            for re in regexes {
+                if re.is_match(path) {
+                    return true;
+                }
+            }
+        }
     }
-    for t in types {
-        match t {
-            EntryType::Dir => {
-                if metadata.is_dir() {
-                    return true;
-                }
-            }
-            EntryType::Link => {
-                if metadata.is_symlink() {
-                    return true;
-                }
-            }
-            EntryType::File => {
-                if metadata.is_file() {
-                    return true;
+    false
+}
+
+fn select_type(metadata: &Metadata, types: &Option<Vec<EntryType>>) -> bool {
+    match types {
+        None => return true,
+        Some(types) => {
+            for t in types {
+                match t {
+                    EntryType::Dir if metadata.is_dir() => return true,
+                    EntryType::Link if  metadata.is_symlink() => return true,
+                    EntryType::File if metadata.is_file() => return true,
+                    _ => (),
                 }
             }
         }
