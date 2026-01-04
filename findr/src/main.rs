@@ -1,4 +1,4 @@
-use std::fs::Metadata;
+use std::{fs::Metadata, path::Path};
 
 use anyhow::{Result, anyhow};
 use clap::{Parser, ValueEnum, builder::PossibleValue};
@@ -50,10 +50,8 @@ fn main() -> Result<()> {
             match entry {
                 Ok(entry) => {
                     let metadata = entry.metadata()?;
-                    let path = entry
-                        .path()
-                        .to_str()
-                        .ok_or_else(|| anyhow!("Can't convert path {:?} to str", entry.path()))?;
+                    let path = entry_filename(&entry)?;
+
                     if select_type(&metadata, &args.entry_types) && select_name(path, &args.names) {
                         println!("{}", entry.path().display());
                     }
@@ -94,4 +92,20 @@ fn select_type(metadata: &Metadata, types: &Option<Vec<EntryType>>) -> bool {
         }
     }
     false
+}
+
+fn entry_filename(entry: &walkdir::DirEntry) -> Result<&str> {
+    let path = entry.path();
+    if path == Path::new(".") {
+        return Ok(".");
+    } else if path == Path::new("..") {
+        return Ok("..");
+    }
+    match path.file_name() {
+        None => Err(anyhow!("Failed to get file_name from {path:?}")),
+        Some(file_name) => match file_name.to_str() {
+            None => Err(anyhow!("Failed to convert file_name {file_name:?} to str")),
+            Some(s) => Ok(s),
+        },
+    }
 }
