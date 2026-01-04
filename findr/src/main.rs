@@ -1,3 +1,5 @@
+use std::fs::Metadata;
+
 use anyhow::Result;
 use clap::{Parser, ValueEnum, builder::PossibleValue};
 use regex::Regex;
@@ -46,10 +48,41 @@ fn main() -> Result<()> {
     for path in args.paths {
         for entry in WalkDir::new(path) {
             match entry {
-                Ok(entry) => println!("{}", entry.path().display()),
+                Ok(entry) => {
+                    let metadata = entry.metadata()?;
+                    if select_type(&metadata, &args.entry_types) {
+                        println!("{}", entry.path().display());
+                    }
+                }
                 Err(err) => eprint!("{err}"),
             }
         }
     }
     Ok(())
+}
+
+fn select_type(metadata: &Metadata, types: &Vec<EntryType>) -> bool {
+    if types.len() == 0 {
+        return true;
+    }
+    for t in types {
+        match t {
+            EntryType::Dir => {
+                if metadata.is_dir() {
+                    return true;
+                }
+            }
+            EntryType::Link => {
+                if metadata.is_symlink() {
+                    return true;
+                }
+            }
+            EntryType::File => {
+                if metadata.is_file() {
+                    return true;
+                }
+            }
+        }
+    }
+    false
 }
