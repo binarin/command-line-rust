@@ -84,7 +84,7 @@ fn select_type(metadata: &Metadata, types: &Option<Vec<EntryType>>) -> bool {
             for t in types {
                 match t {
                     EntryType::Dir if metadata.is_dir() => return true,
-                    EntryType::Link if  metadata.is_symlink() => return true,
+                    EntryType::Link if metadata.is_symlink() => return true,
                     EntryType::File if metadata.is_file() => return true,
                     _ => (),
                 }
