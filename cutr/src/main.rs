@@ -4,6 +4,8 @@
 // • Use Iterator::flatten to remove nested structures from iterators
 // • Use Iterator::flat_map to combine Iterator::map and Iterator::flatten
 
+use std::ops::Range;
+
 use anyhow::Result;
 use clap::{Args as ClapArgs, Parser};
 
@@ -39,6 +41,28 @@ struct ArgsExtract {
     chars: Option<String>,
 }
 
+type PositionList = Vec<Range<usize>>;
+
+#[derive(Debug)]
+pub enum Extract {
+    Fields(PositionList),
+    Bytes(PositionList),
+    Chars(PositionList),
+}
+
+fn parse_pos(pos: String) -> Result<PositionList> {
+    let mut result = vec![];
+
+    for range in pos.split(',') {
+        match range.split_once('-') {
+            Some((fst, snd)) => result.push(Range{start: fst.parse()?, end: snd.parse()?}),
+            _ => result.push(range.parse().map(|start| Range{start, end: start + 1})?),
+        }
+    }
+
+    Ok(result)
+}
+
 fn main() -> Result<()> {
     let args = Args::parse();
     dbg!(args);
@@ -47,7 +71,10 @@ fn main() -> Result<()> {
 
 fn parse_delimiter(s: &str) -> Result<u8, String> {
     match s.len() {
-        1 => s.as_bytes().first().map_or(Err("must be a single byte".to_string()), |b| Ok(*b)),
+        1 => s
+            .as_bytes()
+            .first()
+            .map_or(Err("must be a single byte".to_string()), |b| Ok(*b)),
         _ => Err("must be a single byte".to_string()),
     }
 }
@@ -64,4 +91,22 @@ mod tests {
             parse_delimiter(",,")
         );
     }
+
+    fn test_parse_pos(s: &str, exp: Vec<(usize, usize)>) {
+        let pr = parse_pos(s.to_string()).unwrap();
+        assert_eq!(exp.iter().map(|(start, end)| Range{start: *start, end: *end}).collect::<PositionList>(), pr);
+    }
+
+    #[test]
+    fn parse_pos_single() {
+        test_parse_pos("5", vec!((5, 6)));
+        test_parse_pos("5,1", vec!((5, 6), (1, 2)));
+    }
+
+    #[test]
+    fn parse_pos_range() {
+        test_parse_pos("9-15", vec!((9, 15)));
+        test_parse_pos("9-15,14-31,8", vec!((9, 15), (14, 31), (8, 9)));
+    }
+
 }
