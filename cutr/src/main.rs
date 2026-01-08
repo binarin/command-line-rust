@@ -17,7 +17,7 @@ struct Args {
 
     /// Field delimiter
     #[arg(short, long, default_value = "\t", value_parser = parse_delimiter)]
-    delimiter: String,
+    delimiter: u8,
 
     #[command(flatten)]
     extract: ArgsExtract,
@@ -45,9 +45,9 @@ fn main() -> Result<()> {
     Ok(())
 }
 
-fn parse_delimiter(s: &str) -> Result<String, String> {
+fn parse_delimiter(s: &str) -> Result<u8, String> {
     match s.len() {
-        1 => Ok(s.to_string()),
+        1 => s.as_bytes().first().map_or(Err("must be a single byte".to_string()), |b| Ok(*b)),
         _ => Err("must be a single byte".to_string()),
     }
 }
@@ -58,7 +58,7 @@ mod tests {
 
     #[test]
     fn delimiter_value_parser() {
-        assert_eq!(Ok("."), parse_delimiter(".").as_deref());
+        assert_eq!(Ok(46), parse_delimiter("."));
         assert_eq!(
             Err("must be a single byte".to_string()),
             parse_delimiter(",,")
