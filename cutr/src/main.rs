@@ -16,7 +16,7 @@ struct Args {
     files: Vec<String>,
 
     /// Field delimiter
-    #[arg(short, long, default_value = "\t")]
+    #[arg(short, long, default_value = "\t", value_parser = parse_delimiter)]
     delimiter: String,
 
     #[command(flatten)]
@@ -43,4 +43,25 @@ fn main() -> Result<()> {
     let args = Args::parse();
     dbg!(args);
     Ok(())
+}
+
+fn parse_delimiter(s: &str) -> Result<String, String> {
+    match s.len() {
+        1 => Ok(s.to_string()),
+        _ => Err("must be a single byte".to_string()),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::*;
+
+    #[test]
+    fn delimiter_value_parser() {
+        assert_eq!(Ok("."), parse_delimiter(".").as_deref());
+        assert_eq!(
+            Err("must be a single byte".to_string()),
+            parse_delimiter(",,")
+        );
+    }
 }

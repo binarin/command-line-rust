@@ -94,19 +94,19 @@ fn dies_bad_digit_chars() -> Result<()> {
 // --------------------------------------------------
 #[test]
 fn dies_empty_delimiter() -> Result<()> {
-    dies(
-        &[CSV, "-f", "1", "-d", ""],
-        r#"--delim "" must be a single byte"#,
-    )
+    dies(&[CSV, "-f", "1", "-d", ""], r#"must be a single byte"#)
 }
 
 // --------------------------------------------------
 #[test]
 fn dies_bad_delimiter() -> Result<()> {
-    dies(
-        &[CSV, "-f", "1", "-d", ",,"],
-        r#"--delim ",," must be a single byte"#,
-    )
+    dies(&[CSV, "-f", "1", "-d", ",,"], r#"must be a single byte"#)
+}
+
+// --------------------------------------------------
+#[test]
+fn dies_unicode_delimiter() -> Result<()> {
+    dies(&[CSV, "-f", "1", "-d", "🏰"], r#"must be a single byte"#)
 }
 
 // --------------------------------------------------
