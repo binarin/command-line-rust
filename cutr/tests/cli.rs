@@ -2,7 +2,7 @@ use anyhow::Result;
 use assert_cmd::cargo::cargo_bin_cmd;
 use predicates::prelude::*;
 use pretty_assertions::assert_eq;
-use rand::{distributions::Alphanumeric, Rng};
+use rand::{Rng, distributions::Alphanumeric};
 use std::fs;
 
 const CSV: &str = "tests/inputs/movies1.csv";
