@@ -51,16 +51,18 @@ pub enum Extract {
 }
 
 fn parse_pos(pos: String) -> Result<PositionList> {
-    let mut result = vec![];
-
-    for range in pos.split(',') {
-        match range.split_once('-') {
-            Some((fst, snd)) => result.push(Range{start: fst.parse()?, end: snd.parse()?}),
-            _ => result.push(range.parse().map(|start| Range{start, end: start + 1})?),
-        }
-    }
-
-    Ok(result)
+    pos.split(',')
+        .map(|range| match range.split_once('-') {
+            Some((fst, snd)) => Ok(Range {
+                start: fst.parse()?,
+                end: snd.parse()?,
+            }),
+            _ => Ok(range.parse().map(|start| Range {
+                start,
+                end: start + 1,
+            })?),
+        })
+        .collect()
 }
 
 fn main() -> Result<()> {
