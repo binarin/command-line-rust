@@ -96,19 +96,26 @@ mod tests {
 
     fn test_parse_pos(s: &str, exp: Vec<(usize, usize)>) {
         let pr = parse_pos(s.to_string()).unwrap();
-        assert_eq!(exp.iter().map(|(start, end)| Range{start: *start, end: *end}).collect::<PositionList>(), pr);
+        assert_eq!(
+            exp.iter()
+                .map(|(start, end)| Range {
+                    start: *start,
+                    end: *end
+                })
+                .collect::<PositionList>(),
+            pr
+        );
     }
 
     #[test]
     fn parse_pos_single() {
-        test_parse_pos("5", vec!((5, 6)));
-        test_parse_pos("5,1", vec!((5, 6), (1, 2)));
+        test_parse_pos("5", vec![(5, 6)]);
+        test_parse_pos("5,1", vec![(5, 6), (1, 2)]);
     }
 
     #[test]
     fn parse_pos_range() {
-        test_parse_pos("9-15", vec!((9, 15)));
-        test_parse_pos("9-15,14-31,8", vec!((9, 15), (14, 31), (8, 9)));
+        test_parse_pos("9-15", vec![(9, 15)]);
+        test_parse_pos("9-15,14-31,8", vec![(9, 15), (14, 31), (8, 9)]);
     }
-
 }
