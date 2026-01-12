@@ -53,24 +53,33 @@ pub enum Extract {
 }
 
 fn parse_single_position(s: &str) -> Result<usize> {
-    s.parse().map_err(Error::new).and_then(|val: usize| {
-        match val {
-            v if v > 0 => Ok(v),
-            _ => bail!("Failed to parse '{s}'"),
+    let mut result: usize = 0;
+    for c in s.chars() {
+        match c.to_digit(10) {
+            Some(val) => result = result * 10 + val as usize,
+            None => bail!("Invalid char {c}"),
         }
-    })
+    }
+    if result <= 0 {
+        bail!("Should be positive");
+    }
+    Ok(result)
 }
 
 fn parse_pos(pos: String) -> Result<PositionList> {
     pos.split(',')
         .map(|range| match range.split_once('-') {
-            Some((fst, snd)) => Ok(Range {
-                start: parse_single_position(fst)?,
-                end: parse_single_position(snd)?,
-            }),
+            Some((fst, snd)) => {
+                let start = parse_single_position(fst)?;
+                let end = parse_single_position(snd)?;
+                if start >= end {
+                    bail!("First number in range ({start}) must be lower than second number ({end})");
+                }
+                Ok(Range {start: start - 1, end: end})
+            },
             _ => Ok(parse_single_position(range).map(|start| Range {
-                start,
-                end: start + 1,
+                start: start - 1,
+                end: start,
             })?),
         })
         .collect::<Result<PositionList>>()
@@ -124,14 +133,14 @@ mod tests {
 
     #[test]
     fn parse_pos_single() {
-        test_parse_pos("5", vec![(5, 6)]);
-        test_parse_pos("5,1", vec![(5, 6), (1, 2)]);
+        test_parse_pos("5", vec![(4, 5)]);
+        test_parse_pos("5,1", vec![(4, 5), (0, 1)]);
     }
 
     #[test]
     fn parse_pos_range() {
-        test_parse_pos("9-15", vec![(9, 15)]);
-        test_parse_pos("9-15,14-31,8", vec![(9, 15), (14, 31), (8, 9)]);
+        test_parse_pos("9-15", vec![(8, 15)]);
+        test_parse_pos("9-15,14-31,8", vec![(8, 15), (13, 31), (7, 8)]);
     }
 
     #[test]
@@ -142,41 +151,43 @@ mod tests {
         // Zero is an error
         let res = parse_pos("0".to_string());
         assert!(res.is_err());
-        assert_eq!(res.unwrap_err().to_string(), r#"Failed to parse '0'"#);
+        assert_eq!(res.unwrap_err().to_string(), r#"Should be positive"#);
 
         let res = parse_pos("0-1".to_string());
         assert!(res.is_err());
-        assert_eq!(res.unwrap_err().to_string(), r#"Failed to parse '0'"#);
+        assert_eq!(res.unwrap_err().to_string(), r#"Should be positive"#);
 
         // A leading "+" is an error
         let res = parse_pos("+1".to_string());
         assert!(res.is_err());
-        assert_eq!(res.unwrap_err().to_string(), r#"illegal list value: "+1""#,);
+        assert_eq!(res.unwrap_err().to_string(), r#"Invalid char +"#,);
+
         let res = parse_pos("+1-2".to_string());
         assert!(res.is_err());
         assert_eq!(
             res.unwrap_err().to_string(),
-            r#"illegal list value: "+1-2""#,
+            r#"Invalid char +"#,
         );
+
         let res = parse_pos("1-+2".to_string());
         assert!(res.is_err());
         assert_eq!(
             res.unwrap_err().to_string(),
-            r#"illegal list value: "1-+2""#,
+            r#"Invalid char +"#,
         );
         // Any non-number is an error
         let res = parse_pos("a".to_string());
         assert!(res.is_err());
-        assert_eq!(res.unwrap_err().to_string(), r#"illegal list value: "a""#);
+        assert_eq!(res.unwrap_err().to_string(), r#"Invalid char a"#);
         let res = parse_pos("1,a".to_string());
         assert!(res.is_err());
-        assert_eq!(res.unwrap_err().to_string(), r#"illegal list value: "a""#);
+        assert_eq!(res.unwrap_err().to_string(), r#"Invalid char a"#);
         let res = parse_pos("1-a".to_string());
         assert!(res.is_err());
-        assert_eq!(res.unwrap_err().to_string(), r#"illegal list value: "1-a""#,);
+        assert_eq!(res.unwrap_err().to_string(), r#"Invalid char a"#,);
         let res = parse_pos("a-1".to_string());
         assert!(res.is_err());
-        assert_eq!(res.unwrap_err().to_string(), r#"illegal list value: "a-1""#,);
+        assert_eq!(res.unwrap_err().to_string(), r#"Invalid char a"#,);
         // Wonky ranges
         let res = parse_pos("-".to_string());
         assert!(res.is_err());
