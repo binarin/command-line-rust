@@ -62,7 +62,7 @@ fn build_extract(args: &ArgsExtract) -> Result<Extract> {
         ArgsExtract {
             bytes: Some(bs), ..
         } => Ok(Extract::Bytes(bs.clone())),
-        _ => panic!("clap must ensure that there is exactly one option set in '{args:?}'"),
+        _ => unreachable!("clap must ensure that there is exactly one option set in '{args:?}'"),
     }
 }
 
