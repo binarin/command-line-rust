@@ -65,30 +65,21 @@ fn dies_not_enough_args() -> Result<()> {
 #[test]
 fn dies_bad_digit_field() -> Result<()> {
     let bad = random_string();
-    dies(
-        &[CSV, "-f", &bad],
-        &format!(r#"illegal list value: "{}""#, &bad),
-    )
+    dies(&[CSV, "-f", &bad], &format!(r#"invalid value '{}'"#, &bad))
 }
 
 // --------------------------------------------------
 #[test]
 fn dies_bad_digit_bytes() -> Result<()> {
     let bad = random_string();
-    dies(
-        &[CSV, "-b", &bad],
-        &format!(r#"illegal list value: "{}""#, &bad),
-    )
+    dies(&[CSV, "-b", &bad], &format!(r#"invalid value '{}'"#, &bad))
 }
 
 // --------------------------------------------------
 #[test]
 fn dies_bad_digit_chars() -> Result<()> {
     let bad = random_string();
-    dies(
-        &[CSV, "-c", &bad],
-        &format!(r#"illegal list value: "{}""#, &bad),
-    )
+    dies(&[CSV, "-c", &bad], &format!(r#"invalid value '{}'"#, &bad))
 }
 
 // --------------------------------------------------
