@@ -1,9 +1,3 @@
-// Things to do:
-// • Read and write a delimited text file using the csv crate
-// • Deference a value using *
-// • Use Iterator::flatten to remove nested structures from iterators
-// • Use Iterator::flat_map to combine Iterator::map and Iterator::flatten
-
 use std::fs::File;
 use std::io;
 use std::io::BufRead;
@@ -78,7 +72,7 @@ fn parse_single_position(s: &str) -> Result<usize> {
             None => bail!("Invalid char {c}"),
         }
     }
-    if result <= 0 {
+    if result == 0 {
         bail!("Should be positive");
     }
     Ok(result)
@@ -97,7 +91,7 @@ fn parse_pos(pos: &str) -> Result<PositionList> {
                 }
                 Ok(Range {
                     start: start - 1,
-                    end: end,
+                    end,
                 })
             }
             _ => Ok(parse_single_position(range).map(|start| Range {
@@ -130,20 +124,14 @@ fn extract_file(file: &mut impl BufRead, extract: &Extract, args: &Args) {
     match extract {
         Extract::Chars(pl) => {
             for line in file.lines() {
-                if !line.is_ok() {
-                    continue;
-                }
-                let line = line.unwrap();
-                println!("{}", extract_chars(&line, &pl));
+                let Ok(line) = line else { continue };
+                println!("{}", extract_chars(&line, pl));
             }
         }
         Extract::Bytes(bl) => {
             for line in file.lines() {
-                if !line.is_ok() {
-                    continue;
-                }
-                let line = line.unwrap();
-                println!("{}", extract_bytes(&line, &bl));
+                let Ok(line) = line else { continue };
+                println!("{}", extract_bytes(&line, bl));
             }
         }
         Extract::Fields(fl) => exctract_fields_from_file(file, fl, args.delimiter),
@@ -164,21 +152,24 @@ fn exctract_fields_from_file(file: &mut impl BufRead, fields_pos: &PositionList,
     for line in rdr.records() {
         match line {
             Ok(line) => {
-                let _ = wtr.write_record(&extract_fields(&line, fields_pos));
-                ()
-            },
+                let _ = wtr.write_record(extract_fields(&line, fields_pos));
+            }
             Err(e) => eprintln!("{e}"),
         }
     }
 
     let _ = wtr.flush();
-    ()
 }
 
 fn extract_fields(line: &csv::StringRecord, fields_pos: &[Range<usize>]) -> Vec<String> {
     let mut result = Vec::new();
     for Range { start, end } in fields_pos {
-        let mut subfields: Vec<String> = line.iter().skip(*start).take(end - start).map(From::from).collect();
+        let mut subfields: Vec<String> = line
+            .iter()
+            .skip(*start)
+            .take(end - start)
+            .map(From::from)
+            .collect();
         result.append(&mut subfields);
     }
     result
@@ -225,6 +216,7 @@ fn open(filename: &str) -> Result<Box<dyn BufRead>> {
 
 #[cfg(test)]
 mod tests {
+    #![allow(clippy::single_range_in_vec_init)]
     use csv::StringRecord;
 
     use crate::*;
@@ -357,7 +349,10 @@ mod tests {
 
     #[test]
     fn test_extract_chars() {
-        assert_eq!(extract_chars("", &[0..1]), "".to_string());
+        assert_eq!(
+            extract_chars("", &[Range { start: 0, end: 1 }]),
+            "".to_string()
+        );
         assert_eq!(extract_chars("ábc", &[0..1]), "á".to_string());
         assert_eq!(extract_chars("ábc", &[0..1, 2..3]), "ác".to_string());
         assert_eq!(extract_chars("ábc", &[0..3]), "ábc".to_string());
