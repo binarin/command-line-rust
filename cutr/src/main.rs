@@ -4,6 +4,10 @@
 // • Use Iterator::flatten to remove nested structures from iterators
 // • Use Iterator::flat_map to combine Iterator::map and Iterator::flatten
 
+use std::fs::File;
+use std::io;
+use std::io::BufRead;
+use std::io::BufReader;
 use std::ops::Range;
 
 use anyhow::Result;
@@ -109,10 +113,38 @@ fn parse_pos(pos: &str) -> Result<PositionList> {
 }
 
 fn main() -> Result<()> {
-    let args = Args::parse();
+    run(Args::parse())
+}
+
+fn run(args: Args) -> Result<()> {
     let extract = build_extract(&args.extract)?;
+    args.files.iter().for_each(|filename| match open(filename) {
+        Err(e) => eprintln!("{filename}: {e}"),
+        Ok(mut file) => extract_file(&mut file, &extract),
+    });
     dbg!(extract);
     Ok(())
+}
+
+fn extract_file(file: &mut impl BufRead, extract: &Extract) {
+    match extract {
+        Extract::Chars(pl) => {
+            for line in file.lines() {
+                let line = line.unwrap();
+                println!("{}", extract_chars(&line, &pl));
+            }
+        }
+        _ => unimplemented!(),
+    }
+}
+
+fn extract_chars(line: &str, char_pos: &[Range<usize>]) -> String {
+    let mut result = String::new();
+    for Range { start, end } in char_pos {
+        let substr: String = line.chars().skip(*start).take(end - start).collect();
+        result += &substr;
+    }
+    result
 }
 
 fn parse_delimiter(s: &str) -> Result<u8, String> {
@@ -122,6 +154,13 @@ fn parse_delimiter(s: &str) -> Result<u8, String> {
             .first()
             .map_or(Err("must be a single byte".to_string()), |b| Ok(*b)),
         _ => Err("must be a single byte".to_string()),
+    }
+}
+
+fn open(filename: &str) -> Result<Box<dyn BufRead>> {
+    match filename {
+        "-" => Ok(Box::new(BufReader::new(io::stdin()))),
+        _ => Ok(Box::new(BufReader::new(File::open(filename)?))),
     }
 }
 
@@ -253,5 +292,15 @@ mod tests {
         let res = parse_pos("15,19-20");
         assert!(res.is_ok());
         assert_eq!(res.unwrap(), vec![14..15, 18..20]);
+    }
+
+    #[test]
+    fn test_extract_chars() {
+        assert_eq!(extract_chars("", &[0..1]), "".to_string());
+        assert_eq!(extract_chars("ábc", &[0..1]), "á".to_string());
+        assert_eq!(extract_chars("ábc", &[0..1, 2..3]), "ác".to_string());
+        assert_eq!(extract_chars("ábc", &[0..3]), "ábc".to_string());
+        assert_eq!(extract_chars("ábc", &[2..3, 1..2]), "cb".to_string());
+        assert_eq!(extract_chars("ábc", &[0..1, 1..2, 4..5]), "áb".to_string());
     }
 }
