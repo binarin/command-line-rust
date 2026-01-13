@@ -49,6 +49,19 @@ pub enum Extract {
     Chars(PositionList),
 }
 
+fn main() -> Result<()> {
+    run(Args::parse())
+}
+
+fn run(args: Args) -> Result<()> {
+    let extract = build_extract(&args.extract)?;
+    args.files.iter().for_each(|filename| match open(filename) {
+        Err(e) => eprintln!("{filename}: {e}"),
+        Ok(mut file) => extract_file(filename, &mut file, &extract, &args),
+    });
+    Ok(())
+}
+
 fn build_extract(args: &ArgsExtract) -> Result<Extract> {
     match args {
         ArgsExtract {
@@ -61,6 +74,20 @@ fn build_extract(args: &ArgsExtract) -> Result<Extract> {
             bytes: Some(bs), ..
         } => Ok(Extract::Bytes(bs.clone())),
         _ => unreachable!("clap must ensure that there is exactly one option set in '{args:?}'"),
+    }
+}
+
+fn extract_file(filename: &str, file: &mut impl BufRead, extract: &Extract, args: &Args) {
+    match extract {
+        Extract::Chars(pl) => file.lines().for_each(|line| match line {
+            Err(e) => eprintln!("{filename}: bad line {e}"),
+            Ok(line) => println!("{}", extract_chars(&line, pl)),
+        }),
+        Extract::Bytes(bl) => file.lines().for_each(|line| match line {
+            Err(e) => eprintln!("{filename}: bad line {e}"),
+            Ok(line) => println!("{}", extract_bytes(&line, bl)),
+        }),
+        Extract::Fields(fl) => extract_fields_from_file(file, fl, args.delimiter),
     }
 }
 
@@ -106,39 +133,7 @@ fn parse_pos(pos: &str) -> Result<PositionList> {
         })
 }
 
-fn main() -> Result<()> {
-    run(Args::parse())
-}
-
-fn run(args: Args) -> Result<()> {
-    let extract = build_extract(&args.extract)?;
-    args.files.iter().for_each(|filename| match open(filename) {
-        Err(e) => eprintln!("{filename}: {e}"),
-        Ok(mut file) => extract_file(&mut file, &extract, &args),
-    });
-    dbg!(extract);
-    Ok(())
-}
-
-fn extract_file(file: &mut impl BufRead, extract: &Extract, args: &Args) {
-    match extract {
-        Extract::Chars(pl) => {
-            for line in file.lines() {
-                let Ok(line) = line else { continue };
-                println!("{}", extract_chars(&line, pl));
-            }
-        }
-        Extract::Bytes(bl) => {
-            for line in file.lines() {
-                let Ok(line) = line else { continue };
-                println!("{}", extract_bytes(&line, bl));
-            }
-        }
-        Extract::Fields(fl) => exctract_fields_from_file(file, fl, args.delimiter),
-    }
-}
-
-fn exctract_fields_from_file(file: &mut impl BufRead, fields_pos: &PositionList, delimiter: u8) {
+fn extract_fields_from_file(file: &mut impl BufRead, fields_pos: &PositionList, delimiter: u8) {
     let mut rdr = csv::ReaderBuilder::new()
         .has_headers(false)
         .delimiter(delimiter)
