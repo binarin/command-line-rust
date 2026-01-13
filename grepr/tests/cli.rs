@@ -1,12 +1,11 @@
 use anyhow::Result;
-use assert_cmd::Command;
+use assert_cmd::cargo::cargo_bin_cmd;
 use predicates::prelude::*;
 use pretty_assertions::assert_eq;
 use rand::{distributions::Alphanumeric, Rng};
 use std::{fs, path::Path};
 use sys_info::os_type;
 
-const PRG: &str = "grepr";
 const BUSTLE: &str = "tests/inputs/bustle.txt";
 const EMPTY: &str = "tests/inputs/empty.txt";
 const FOX: &str = "tests/inputs/fox.txt";
@@ -31,7 +30,7 @@ fn gen_bad_file() -> String {
 // --------------------------------------------------
 #[test]
 fn dies_no_args() -> Result<()> {
-    Command::cargo_bin(PRG)?
+    cargo_bin_cmd!()
         .assert()
         .failure()
         .stderr(predicate::str::contains("Usage"));
@@ -41,7 +40,7 @@ fn dies_no_args() -> Result<()> {
 // --------------------------------------------------
 #[test]
 fn dies_bad_pattern() -> Result<()> {
-    Command::cargo_bin(PRG)?
+    cargo_bin_cmd!()
         .args(["*foo", FOX])
         .assert()
         .failure()
@@ -54,7 +53,7 @@ fn dies_bad_pattern() -> Result<()> {
 fn warns_bad_file() -> Result<()> {
     let bad = gen_bad_file();
     let expected = format!("{bad}: .* [(]os error 2[)]");
-    Command::cargo_bin(PRG)?
+    cargo_bin_cmd!()
         .args(["foo", &bad])
         .assert()
         .stderr(predicate::str::is_match(expected)?);
@@ -73,7 +72,7 @@ fn run(args: &[&str], expected_file: &str) -> Result<()> {
     };
 
     let expected = fs::read_to_string(expected_file)?;
-    let output = Command::cargo_bin(PRG)?.args(args).output().expect("fail");
+    let output = cargo_bin_cmd!().args(args).output().expect("fail");
     assert!(output.status.success());
 
     let stdout = String::from_utf8(output.stdout).expect("invalid UTF-8");
@@ -233,7 +232,7 @@ fn insensitive_count_multiple() -> Result<()> {
 fn warns_dir_not_recursive() -> Result<()> {
     let stdout = "tests/inputs/fox.txt:\
         The quick brown fox jumps over the lazy dog.";
-    Command::cargo_bin(PRG)?
+    cargo_bin_cmd!()
         .args(["fox", INPUTS_DIR, FOX])
         .assert()
         .stderr(predicate::str::contains("tests/inputs is a directory"))
@@ -248,7 +247,7 @@ fn stdin() -> Result<()> {
     let expected =
         fs::read_to_string("tests/expected/bustle.txt.the.capitalized")?;
 
-    let output = Command::cargo_bin(PRG)?
+    let output = cargo_bin_cmd!()
         .arg("The")
         .write_stdin(input)
         .output()
@@ -274,7 +273,7 @@ fn stdin_insensitive_count() -> Result<()> {
         "tests/expected/the.recursive.insensitive.count.stdin";
     let expected = fs::read_to_string(expected_file)?;
 
-    let output = Command::cargo_bin(PRG)?
+    let output = cargo_bin_cmd!()
         .args(["-ci", "the", "-"])
         .write_stdin(input)
         .output()
