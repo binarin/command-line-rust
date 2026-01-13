@@ -120,13 +120,13 @@ fn run(args: Args) -> Result<()> {
     let extract = build_extract(&args.extract)?;
     args.files.iter().for_each(|filename| match open(filename) {
         Err(e) => eprintln!("{filename}: {e}"),
-        Ok(mut file) => extract_file(&mut file, &extract),
+        Ok(mut file) => extract_file(&mut file, &extract, &args),
     });
     dbg!(extract);
     Ok(())
 }
 
-fn extract_file(file: &mut impl BufRead, extract: &Extract) {
+fn extract_file(file: &mut impl BufRead, extract: &Extract, args: &Args) {
     match extract {
         Extract::Chars(pl) => {
             for line in file.lines() {
@@ -146,8 +146,42 @@ fn extract_file(file: &mut impl BufRead, extract: &Extract) {
                 println!("{}", extract_bytes(&line, &bl));
             }
         }
-        _ => unimplemented!(),
+        Extract::Fields(fl) => exctract_fields_from_file(file, fl, args.delimiter),
     }
+}
+
+fn exctract_fields_from_file(file: &mut impl BufRead, fields_pos: &PositionList, delimiter: u8) {
+    let mut rdr = csv::ReaderBuilder::new()
+        .has_headers(false)
+        .delimiter(delimiter)
+        .flexible(true)
+        .from_reader(file);
+
+    let mut wtr = csv::WriterBuilder::new()
+        .delimiter(delimiter)
+        .from_writer(std::io::stdout());
+
+    for line in rdr.records() {
+        match line {
+            Ok(line) => {
+                let _ = wtr.write_record(&extract_fields(&line, fields_pos));
+                ()
+            },
+            Err(e) => eprintln!("{e}"),
+        }
+    }
+
+    let _ = wtr.flush();
+    ()
+}
+
+fn extract_fields(line: &csv::StringRecord, fields_pos: &[Range<usize>]) -> Vec<String> {
+    let mut result = Vec::new();
+    for Range { start, end } in fields_pos {
+        let mut subfields: Vec<String> = line.iter().skip(*start).take(end - start).map(From::from).collect();
+        result.append(&mut subfields);
+    }
+    result
 }
 
 fn extract_chars(line: &str, char_pos: &[Range<usize>]) -> String {
@@ -191,6 +225,8 @@ fn open(filename: &str) -> Result<Box<dyn BufRead>> {
 
 #[cfg(test)]
 mod tests {
+    use csv::StringRecord;
+
     use crate::*;
 
     #[test]
@@ -336,5 +372,15 @@ mod tests {
         assert_eq!(extract_bytes("ábc", &[0..4]), "ábc".to_string());
         assert_eq!(extract_bytes("ábc", &[3..4, 2..3]), "cb".to_string());
         assert_eq!(extract_bytes("ábc", &[0..2, 5..6]), "á".to_string());
+    }
+
+    #[test]
+    fn test_extract_fields() {
+        let rec = StringRecord::from(vec!["Captain", "Sham", "12345"]);
+        assert_eq!(extract_fields(&rec, &[0..1]), &["Captain"]);
+        assert_eq!(extract_fields(&rec, &[1..2]), &["Sham"]);
+        assert_eq!(extract_fields(&rec, &[0..1, 2..3]), &["Captain", "12345"]);
+        assert_eq!(extract_fields(&rec, &[0..1, 3..4]), &["Captain"]);
+        assert_eq!(extract_fields(&rec, &[1..2, 0..1]), &["Sham", "Captain"]);
     }
 }
