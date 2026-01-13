@@ -130,8 +130,20 @@ fn extract_file(file: &mut impl BufRead, extract: &Extract) {
     match extract {
         Extract::Chars(pl) => {
             for line in file.lines() {
+                if !line.is_ok() {
+                    continue;
+                }
                 let line = line.unwrap();
                 println!("{}", extract_chars(&line, &pl));
+            }
+        }
+        Extract::Bytes(bl) => {
+            for line in file.lines() {
+                if !line.is_ok() {
+                    continue;
+                }
+                let line = line.unwrap();
+                println!("{}", extract_bytes(&line, &bl));
             }
         }
         _ => unimplemented!(),
@@ -143,6 +155,19 @@ fn extract_chars(line: &str, char_pos: &[Range<usize>]) -> String {
     for Range { start, end } in char_pos {
         let substr: String = line.chars().skip(*start).take(end - start).collect();
         result += &substr;
+    }
+    result
+}
+
+fn extract_bytes(line: &str, byte_pos: &[Range<usize>]) -> String {
+    let mut result = String::new();
+    for Range { start, end } in byte_pos {
+        let subbytes = line
+            .bytes()
+            .skip(*start)
+            .take(end - start)
+            .collect::<Vec<u8>>();
+        result += &String::from_utf8_lossy(&subbytes);
     }
     result
 }
@@ -302,5 +327,14 @@ mod tests {
         assert_eq!(extract_chars("ábc", &[0..3]), "ábc".to_string());
         assert_eq!(extract_chars("ábc", &[2..3, 1..2]), "cb".to_string());
         assert_eq!(extract_chars("ábc", &[0..1, 1..2, 4..5]), "áb".to_string());
+    }
+    #[test]
+    fn test_extract_bytes() {
+        assert_eq!(extract_bytes("ábc", &[0..1]), "�".to_string());
+        assert_eq!(extract_bytes("ábc", &[0..2]), "á".to_string());
+        assert_eq!(extract_bytes("ábc", &[0..3]), "áb".to_string());
+        assert_eq!(extract_bytes("ábc", &[0..4]), "ábc".to_string());
+        assert_eq!(extract_bytes("ábc", &[3..4, 2..3]), "cb".to_string());
+        assert_eq!(extract_bytes("ábc", &[0..2, 5..6]), "á".to_string());
     }
 }
