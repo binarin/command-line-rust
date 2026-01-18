@@ -119,6 +119,13 @@ impl Display for Input {
     }
 }
 
+fn open(input: &Input) -> Result<Box<dyn BufRead>> {
+    match input {
+        Input::StdIn => Ok(Box::new(BufReader::new(std::io::stdin()))),
+        Input::File(file) => Ok(Box::new(BufReader::new(File::open(file)?))),
+    }
+}
+
 fn find_lines<T: BufRead>(mut file: T, pattern: &Regex, invert: bool) -> Result<Vec<String>> {
     let mut result = vec![];
     for line in file.lines() {
