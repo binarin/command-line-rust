@@ -44,17 +44,33 @@ struct Args {
 
 fn main() -> Result<()> {
     let args = Args::parse();
+
     let pattern = regex::RegexBuilder::new(&args.pattern)
         .case_insensitive(args.insensitive)
         .build()
         .map_err(|_e| anyhow!(r#"Invalid pattern "{}""#, args.pattern))?;
-    println!(r#"Pattern "{pattern}""#);
+
     let entries = find_files(&args.files, args.recursive);
+    let show_filenames = entries.len() > 1;
+
     for entry in entries {
-        match entry {
-            Err(e) => eprintln!("{e}"),
-            Ok(file) => println!(r#"file "{file}""#),
-        }
+        let do_file = |entry| -> Result<()> {
+            let input = entry?;
+            let prefix = if show_filenames {
+                format!("{input}:")
+            } else {
+                String::new()
+            };
+            let fh = open(&input)?;
+            let filtered = find_lines(fh, &pattern, args.invert)?;
+            if args.count {
+                println!("{prefix}{}", filtered.len());
+            } else {
+                filtered.iter().for_each(|l| println!("{prefix}{l}"));
+            }
+            Ok(())
+        };
+        let _ = do_file(entry).map_err(|e| eprintln!("{e:?}"));
     }
     Ok(())
 }
@@ -77,7 +93,7 @@ fn find_files(paths: &[Input], recursive: bool) -> Vec<Result<Input>> {
 
         if !recursive {
             let single_res = std::fs::metadata(path)
-                .map_err(From::from)
+                .map_err(|err| anyhow!("{path}: {err}"))
                 .and_then(|metadata| {
                     if metadata.is_dir() {
                         Err(anyhow!("{path} is a directory"))
@@ -113,7 +129,7 @@ fn find_files(paths: &[Input], recursive: bool) -> Vec<Result<Input>> {
 impl Display for Input {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Input::StdIn => f.write_str("<STDIN>"),
+            Input::StdIn => f.write_str("-"),
             Input::File(file) => file.fmt(f),
         }
     }
@@ -126,7 +142,7 @@ fn open(input: &Input) -> Result<Box<dyn BufRead>> {
     }
 }
 
-fn find_lines<T: BufRead>(mut file: T, pattern: &Regex, invert: bool) -> Result<Vec<String>> {
+fn find_lines<T: BufRead>(file: T, pattern: &Regex, invert: bool) -> Result<Vec<String>> {
     let mut result = vec![];
     for line in file.lines() {
         let line = line?;
