@@ -136,10 +136,10 @@ mod tests {
         // The function should reject a directory without the recursive option
         let files = find_files(&[Input::File("./tests/inputs".to_string())], false);
         assert_eq!(files.len(), 1);
-        if let Err(e) = &files[0] {
-            assert_eq!(e.to_string(), "./tests/inputs is a directory");
-        }
-        // XXX else check
+        assert_eq!(
+            files[0].as_ref().unwrap_err().to_string(),
+            "./tests/inputs is a directory"
+        );
 
         // Verify the function recurses to find four files in the directory
         let res = find_files(&[Input::File("./tests/inputs".to_string())], true);
