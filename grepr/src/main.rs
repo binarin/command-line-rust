@@ -66,7 +66,7 @@ fn main() -> Result<()> {
             if args.count {
                 println!("{prefix}{}", filtered.len());
             } else {
-                filtered.iter().for_each(|l| println!("{prefix}{l}"));
+                filtered.iter().for_each(|l| print!("{prefix}{l}"));
             }
             Ok(())
         };
@@ -142,12 +142,16 @@ fn open(input: &Input) -> Result<Box<dyn BufRead>> {
     }
 }
 
-fn find_lines<T: BufRead>(file: T, pattern: &Regex, invert: bool) -> Result<Vec<String>> {
+fn find_lines<T: BufRead>(mut file: T, pattern: &Regex, invert: bool) -> Result<Vec<String>> {
     let mut result = vec![];
-    for line in file.lines() {
-        let line = line?;
-        if pattern.is_match(&line) ^ invert {
-            result.push(line);
+    loop {
+        let mut s = String::new();
+        let bytes_read = file.read_line(&mut s)?;
+        if bytes_read == 0 {
+            break;
+        }
+        if pattern.is_match(&s) ^ invert {
+            result.push(s);
         }
     }
     Ok(result)
