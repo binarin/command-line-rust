@@ -34,8 +34,15 @@ fn main() -> Result<()> {
     let pattern = regex::RegexBuilder::new(&args.pattern)
         .case_insensitive(args.insensitive)
         .build()
-        .map_err(|e| anyhow!(r#"Invalid pattern "{}""#, args.pattern))?;
+        .map_err(|_e| anyhow!(r#"Invalid pattern "{}""#, args.pattern))?;
     println!(r#"Pattern "{pattern}""#);
+    let entries = find_files(&args.files, args.recursive);
+    for entry in entries {
+        match entry {
+            Err(e) => eprintln!("{e}"),
+            Ok(file) => println!(r#"file "{file}""#),
+        }
+    }
     Ok(())
 }
 
@@ -43,12 +50,16 @@ fn find_files(paths: &[String], recursive: bool) -> Vec<Result<String>> {
     let mut result = Vec::new();
 
     for path in paths {
+        if path == "-" {
+            result.push(Ok("-".to_string()));
+            continue;
+        }
         if !recursive {
             let single_res = std::fs::metadata(path)
                 .map_err(From::from)
                 .and_then(|metadata| {
                     if metadata.is_dir() {
-                        Err(anyhow!("'{path}' is a directory"))
+                        Err(anyhow!("{path} is a directory"))
                     } else {
                         Ok(path.to_string())
                     }
@@ -84,6 +95,11 @@ mod tests {
     use rand::{Rng, distributions::Alphanumeric};
     #[test]
     fn test_find_files() {
+        // "-" is a special case, we shouldn’t check whether it exists or not
+        let files = find_files(&["-".to_string()], false);
+        assert_eq!(files.len(), 1);
+        assert_eq!(files[0].as_ref().unwrap(), "-");
+
         // Verify that the function finds a file known to exist
         let files = find_files(&["./tests/inputs/fox.txt".to_string()], false);
         assert_eq!(files.len(), 1);
