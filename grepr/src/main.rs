@@ -1,11 +1,12 @@
 use std::{
     fmt::Display,
     fs::File,
-    io::{BufRead, BufReader},
+    io::{BufRead, BufReader, IsTerminal, Write},
 };
 
+use ansi_term::Color::Purple;
 use anyhow::{Result, anyhow};
-use clap::Parser;
+use clap::{ColorChoice, Parser};
 use regex::Regex;
 
 #[derive(Debug, Clone, PartialEq)]
@@ -40,10 +41,20 @@ struct Args {
     /// Invert match
     #[arg(short('v'), long("invert-match"))]
     invert: bool,
+
+    /// Whether to use colored output
+    #[arg(long, value_name="WHEN", default_value_t = ColorChoice::Auto, value_enum)]
+    color: ColorChoice,
 }
 
 fn main() -> Result<()> {
     let args = Args::parse();
+
+    let color_output = match args.color {
+        ColorChoice::Auto => std::io::stdin().is_terminal(),
+        ColorChoice::Always => true,
+        ColorChoice::Never => false,
+    };
 
     let pattern = regex::RegexBuilder::new(&args.pattern)
         .case_insensitive(args.insensitive)
@@ -52,9 +63,10 @@ fn main() -> Result<()> {
 
     let entries = find_files(&args.files, args.recursive);
     let show_filenames = entries.len() > 1;
+    let mut stdout = std::io::stdout();
 
     for entry in entries {
-        let do_file = |entry| -> Result<()> {
+        let mut do_file = |entry| -> Result<()> {
             let input = entry?;
             let prefix = if show_filenames {
                 format!("{input}:")
@@ -65,8 +77,19 @@ fn main() -> Result<()> {
             let filtered = find_lines(fh, &pattern, args.invert)?;
             if args.count {
                 println!("{prefix}{}", filtered.len());
+            } else if color_output {
+                filtered.iter().for_each(|Match { line, matched }| {
+                    if let Some((start, end)) = matched {
+                        let bytes = line.as_bytes();
+                        let _ = stdout.write_all(&bytes[0..*start]);
+                        let _ = Purple.paint(&bytes[*start..*end]).write_to(&mut stdout);
+                        let _ = stdout.write_all(&bytes[*end..]);
+                    } else {
+                        print!("{prefix}{}", line);
+                    }
+                });
             } else {
-                filtered.iter().for_each(|l| print!("{prefix}{l}"));
+                filtered.iter().for_each(|l| print!("{prefix}{}", l.line));
             }
             Ok(())
         };
@@ -142,17 +165,37 @@ fn open(input: &Input) -> Result<Box<dyn BufRead>> {
     }
 }
 
-fn find_lines<T: BufRead>(mut file: T, pattern: &Regex, invert: bool) -> Result<Vec<String>> {
+struct Match {
+    line: String,
+    matched: Option<(usize, usize)>,
+}
+
+fn find_lines<T: BufRead>(mut file: T, pattern: &Regex, invert: bool) -> Result<Vec<Match>> {
     let mut result = vec![];
+    let mut line = String::new();
     loop {
-        let mut s = String::new();
-        let bytes_read = file.read_line(&mut s)?;
+        let bytes_read = file.read_line(&mut line)?;
         if bytes_read == 0 {
             break;
         }
-        if pattern.is_match(&s) ^ invert {
-            result.push(s);
+        if invert {
+            if !pattern.is_match(&line) {
+                result.push(Match {
+                    line: std::mem::take(&mut line),
+                    matched: None,
+                });
+                continue;
+            }
+        } else if let Some(matched) = pattern.find(&line) {
+            let matched = Some((matched.start(), matched.end()));
+            result.push(Match {
+                line: std::mem::take(&mut line),
+                matched,
+            });
+            continue;
         }
+
+        line.clear();
     }
     Ok(result)
 }

@@ -394,6 +394,7 @@ dependencies = [
 name = "grepr"
 version = "0.1.0"
 dependencies = [
+ "ansi_term",
  "anyhow",
  "assert_cmd 2.1.1",
  "clap 4.5.53",

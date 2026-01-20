@@ -8,6 +8,7 @@ anyhow = "1.0.79"
 clap = { version = "4.5.0", features = ["derive"] }
 regex = "1.10.3"
 walkdir = "2.4.0"
+ansi_term = "0.12.1"
 
 [dev-dependencies]
 assert_cmd = "2.0.13"
