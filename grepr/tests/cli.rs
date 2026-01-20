@@ -60,168 +60,205 @@ fn warns_bad_file() -> Result<()> {
     Ok(())
 }
 
-// --------------------------------------------------
-fn run(args: &[&str], expected_file: &str) -> Result<()> {
-    let windows_file = format!("{expected_file}.windows");
-    let expected_file = if os_type().unwrap() == "Windows" && Path::new(&windows_file).is_file() {
-        &windows_file
-    } else {
-        expected_file
+macro_rules! run {
+    ($expected_file:expr, $($args:expr),* $(,)? ) => {
+        {
+            let args = [$($args),*];
+            let expected_file: String = From::from($expected_file);
+            let windows_file: String = format!("{expected_file}.windows");
+            let expected_file = if os_type().unwrap() == "Windows" && Path::new(&windows_file).is_file() {
+                windows_file
+            } else {
+                expected_file
+            };
+
+            let expected = fs::read_to_string(expected_file).expect("input-fail");
+            let output = cargo_bin_cmd!().args(args).output().expect("fail");
+            assert!(output.status.success());
+
+            let stdout = String::from_utf8(output.stdout).expect("invalid UTF-8");
+            assert_eq!(stdout, expected);
+            Ok(())
+        }
     };
-
-    let expected = fs::read_to_string(expected_file)?;
-    let output = cargo_bin_cmd!().args(args).output().expect("fail");
-    assert!(output.status.success());
-
-    let stdout = String::from_utf8(output.stdout).expect("invalid UTF-8");
-    assert_eq!(stdout, expected);
-    Ok(())
 }
 
 // --------------------------------------------------
 #[test]
 fn empty_file() -> Result<()> {
-    run(&["foo", EMPTY], "tests/expected/empty.foo")
+    run!("tests/expected/empty.foo", "foo", EMPTY)
 }
 
 // --------------------------------------------------
 #[test]
 fn empty_regex() -> Result<()> {
-    run(&["", FOX], "tests/expected/empty_regex.fox.txt")
+    run!("tests/expected/empty_regex.fox.txt", "", FOX)
 }
 
 // --------------------------------------------------
 #[test]
 fn bustle_capitalized() -> Result<()> {
-    run(
-        &["The", BUSTLE],
-        "tests/expected/bustle.txt.the.capitalized",
-    )
+    run!("tests/expected/bustle.txt.the.capitalized", "The", BUSTLE,)
 }
 
 // --------------------------------------------------
 #[test]
 fn bustle_lowercase() -> Result<()> {
-    run(&["the", BUSTLE], "tests/expected/bustle.txt.the.lowercase")
+    run!("tests/expected/bustle.txt.the.lowercase", "the", BUSTLE)
 }
 
 // --------------------------------------------------
 #[test]
 fn bustle_insensitive() -> Result<()> {
-    run(
-        &["--insensitive", "the", BUSTLE],
+    run!(
         "tests/expected/bustle.txt.the.lowercase.insensitive",
+        "--insensitive",
+        "the",
+        BUSTLE
     )
 }
 
 // --------------------------------------------------
 #[test]
 fn nobody() -> Result<()> {
-    run(&["nobody", NOBODY], "tests/expected/nobody.txt")
+    run!("tests/expected/nobody.txt", "nobody", NOBODY)
 }
 
 // --------------------------------------------------
 #[test]
 fn nobody_insensitive() -> Result<()> {
-    run(
-        &["-i", "nobody", NOBODY],
+    run!(
         "tests/expected/nobody.txt.insensitive",
+        "-i",
+        "nobody",
+        NOBODY,
     )
 }
 
 // --------------------------------------------------
 #[test]
 fn multiple_files() -> Result<()> {
-    run(
-        &["The", BUSTLE, EMPTY, FOX, NOBODY],
+    run!(
         "tests/expected/all.the.capitalized",
+        "The",
+        BUSTLE,
+        EMPTY,
+        FOX,
+        NOBODY,
     )
 }
 
 // --------------------------------------------------
 #[test]
 fn multiple_files_insensitive() -> Result<()> {
-    run(
-        &["-i", "the", BUSTLE, EMPTY, FOX, NOBODY],
+    run!(
         "tests/expected/all.the.lowercase.insensitive",
+        "-i",
+        "the",
+        BUSTLE,
+        EMPTY,
+        FOX,
+        NOBODY,
     )
 }
 
 // --------------------------------------------------
 #[test]
 fn recursive() -> Result<()> {
-    run(
-        &["--recursive", "dog", INPUTS_DIR],
+    run!(
         "tests/expected/dog.recursive",
+        "--recursive",
+        "dog",
+        INPUTS_DIR,
     )
 }
 
 // --------------------------------------------------
 #[test]
 fn recursive_insensitive() -> Result<()> {
-    run(
-        &["-ri", "then", INPUTS_DIR],
+    run!(
         "tests/expected/the.recursive.insensitive",
+        "-ri",
+        "then",
+        INPUTS_DIR,
     )
 }
 
 // --------------------------------------------------
 #[test]
 fn sensitive_count_capital() -> Result<()> {
-    run(
-        &["--count", "The", BUSTLE],
+    run!(
         "tests/expected/bustle.txt.the.capitalized.count",
+        "--count",
+        "The",
+        BUSTLE,
     )
 }
 
 // --------------------------------------------------
 #[test]
 fn sensitive_count_lower() -> Result<()> {
-    run(
-        &["--count", "the", BUSTLE],
+    run!(
         "tests/expected/bustle.txt.the.lowercase.count",
+        "--count",
+        "the",
+        BUSTLE,
     )
 }
 
 // --------------------------------------------------
 #[test]
 fn insensitive_count() -> Result<()> {
-    run(
-        &["-ci", "the", BUSTLE],
+    run!(
         "tests/expected/bustle.txt.the.lowercase.insensitive.count",
+        "-ci",
+        "the",
+        BUSTLE,
     )
 }
 
 // --------------------------------------------------
 #[test]
 fn nobody_count() -> Result<()> {
-    run(&["-c", "nobody", NOBODY], "tests/expected/nobody.txt.count")
+    run!("tests/expected/nobody.txt.count", "-c", "nobody", NOBODY)
 }
 
 // --------------------------------------------------
 #[test]
 fn nobody_count_insensitive() -> Result<()> {
-    run(
-        &["-ci", "nobody", NOBODY],
+    run!(
         "tests/expected/nobody.txt.insensitive.count",
+        "-ci",
+        "nobody",
+        NOBODY,
     )
 }
 
 // --------------------------------------------------
 #[test]
 fn sensitive_count_multiple() -> Result<()> {
-    run(
-        &["-c", "The", BUSTLE, EMPTY, FOX, NOBODY],
+    run!(
         "tests/expected/all.the.capitalized.count",
+        "-c",
+        "The",
+        BUSTLE,
+        EMPTY,
+        FOX,
+        NOBODY,
     )
 }
 
 // --------------------------------------------------
 #[test]
 fn insensitive_count_multiple() -> Result<()> {
-    run(
-        &["-ic", "the", BUSTLE, EMPTY, FOX, NOBODY],
+    run!(
         "tests/expected/all.the.lowercase.insensitive.count",
+        "-ic",
+        "the",
+        BUSTLE,
+        EMPTY,
+        FOX,
+        NOBODY,
     )
 }
 
