@@ -2,7 +2,7 @@ use anyhow::Result;
 use assert_cmd::cargo::cargo_bin_cmd;
 use predicates::prelude::*;
 use pretty_assertions::assert_eq;
-use rand::{distributions::Alphanumeric, Rng};
+use rand::{Rng, distributions::Alphanumeric};
 use std::fs;
 
 const EMPTY: &str = "tests/inputs/empty.txt";
@@ -74,6 +74,20 @@ fn dies_both_stdin() -> Result<()> {
 }
 
 // --------------------------------------------------
+macro_rules! run {
+    ($expected_file:expr , $($args:expr),* $(,)? ) => {{
+        let expected_file: String = From::from($expected_file);
+        let args = [ $($args),* ];
+        let expected = fs::read_to_string(expected_file).expect("infile-fail");
+        let output = cargo_bin_cmd!().args(args).output().expect("fail");
+        assert!(output.status.success());
+
+        let stdout = String::from_utf8(output.stdout).expect("invalid UTF-8");
+        assert_eq!(stdout, expected);
+        Ok(())
+    }};
+}
+
 fn run(args: &[&str], expected_file: &str) -> Result<()> {
     let expected = fs::read_to_string(expected_file)?;
     let output = cargo_bin_cmd!().args(args).output().expect("fail");
@@ -85,11 +99,28 @@ fn run(args: &[&str], expected_file: &str) -> Result<()> {
 }
 
 // --------------------------------------------------
-fn run_stdin(
-    args: &[&str],
-    input_file: &str,
-    expected_file: &str,
-) -> Result<()> {
+macro_rules! run_stdin {
+    ($input_file:expr , $expected_file:expr , $($args:expr),* $(,)? ) => {{
+        let input_file: String = From::from($input_file);
+        let input = fs::read_to_string(input_file.as_str()).expect("input-file");
+
+        let expected_file: String = From::from($expected_file);
+        let expected = fs::read_to_string(expected_file.as_str()).expect("expected-file");
+
+        let output = cargo_bin_cmd!()
+            .args([ $($args),* ])
+            .write_stdin(input)
+            .output()
+            .expect("fail");
+        assert!(output.status.success());
+
+        let stdout = String::from_utf8(output.stdout).expect("invalid UTF-8");
+        assert_eq!(stdout, expected);
+        Ok(())
+    }};
+}
+
+fn run_stdin(args: &[&str], input_file: &str, expected_file: &str) -> Result<()> {
     let input = fs::read_to_string(input_file)?;
     let expected = fs::read_to_string(expected_file)?;
     let output = cargo_bin_cmd!()
@@ -107,7 +138,7 @@ fn run_stdin(
 // --------------------------------------------------
 #[test]
 fn empty_empty() -> Result<()> {
-    run(&[EMPTY, EMPTY], "tests/expected/empty_empty.out")
+    run!("tests/expected/empty_empty.out", EMPTY, EMPTY)
 }
 
 // --------------------------------------------------
@@ -247,10 +278,10 @@ fn file1_file2_123_i() -> Result<()> {
 // --------------------------------------------------
 #[test]
 fn stdin_file1() -> Result<()> {
-    run_stdin(
-        &["-123", "-i", "-", FILE2],
+    run_stdin!(
         FILE1,
         "tests/expected/file1_file2.123.i.out",
+        "-123", "-i", "-", FILE2,
     )
 }
 
