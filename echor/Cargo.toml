@@ -7,5 +7,5 @@ edition = "2024"
 clap = "2.33"
 
 [dev-dependencies]
-assert_cmd = "2"
-predicates = "2"
+assert_cmd.workspace = true
+predicates.workspace = true
