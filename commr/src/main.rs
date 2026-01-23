@@ -1,14 +1,16 @@
+use anyhow::{Result, bail};
 use clap::Parser;
+use learnr::{CLIInput, open};
 
 /// ’comm’ in Rust
 #[derive(Debug, Parser)]
 #[command(about, version, author)]
 pub struct Args {
     #[arg(value_name = "FILE1")]
-    file1: String,
+    file1: CLIInput,
 
     #[arg(value_name = "FILE2")]
-    file2: String,
+    file2: CLIInput,
 
     /// suppress column 1 (lines unique to FILE1)
     #[arg(short('1'), action=clap::ArgAction::SetFalse)]
@@ -36,7 +38,13 @@ pub struct Args {
     delimiter: String,
 }
 
-fn main() {
+fn main() -> Result<()> {
     let args = Args::parse();
+    if args.file1 == CLIInput::StdIn && args.file2 == CLIInput::StdIn {
+        bail!(r#"Both input files cannot be STDIN ("-")"#);
+    }
+    let _fh1 = open(&args.file1)?;
+    let _fh2 = open(&args.file2)?;
     dbg!(args);
+    Ok(())
 }
