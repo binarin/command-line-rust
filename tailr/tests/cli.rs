@@ -1,12 +1,10 @@
 use anyhow::Result;
-use assert_cmd::Command;
+use assert_cmd::cargo::cargo_bin_cmd;
 use predicates::prelude::*;
 use pretty_assertions::assert_eq;
-use rand::{distributions::Alphanumeric, Rng};
+use rand::{Rng, distributions::Alphanumeric};
 use std::fs::{self, File};
 use std::io::Read;
-
-const PRG: &str = "tailr";
 const EMPTY: &str = "tests/inputs/empty.txt";
 const ONE: &str = "tests/inputs/one.txt";
 const TWO: &str = "tests/inputs/two.txt";
@@ -35,7 +33,7 @@ fn gen_bad_file() -> String {
 // --------------------------------------------------
 #[test]
 fn dies_no_args() -> Result<()> {
-    Command::cargo_bin(PRG)?
+    cargo_bin_cmd!()
         .assert()
         .failure()
         .stderr(predicate::str::contains("Usage"));
@@ -48,7 +46,7 @@ fn dies_no_args() -> Result<()> {
 fn dies_bad_bytes() -> Result<()> {
     let bad = random_string();
     let expected = format!("illegal byte count -- {bad}");
-    Command::cargo_bin(PRG)?
+    cargo_bin_cmd!()
         .args(["-c", &bad, EMPTY])
         .assert()
         .failure()
@@ -62,7 +60,7 @@ fn dies_bad_bytes() -> Result<()> {
 fn dies_bad_lines() -> Result<()> {
     let bad = random_string();
     let expected = format!("illegal line count -- {bad}");
-    Command::cargo_bin(PRG)?
+    cargo_bin_cmd!()
         .args(["-n", &bad, EMPTY])
         .assert()
         .failure()
@@ -77,7 +75,7 @@ fn dies_bytes_and_lines() -> Result<()> {
     let msg = "the argument '--lines <LINES>' cannot be used \
                with '--bytes <BYTES>'";
 
-    Command::cargo_bin(PRG)?
+    cargo_bin_cmd!()
         .args(["-n", "1", "-c", "2"])
         .assert()
         .failure()
@@ -91,7 +89,7 @@ fn dies_bytes_and_lines() -> Result<()> {
 fn skips_bad_file() -> Result<()> {
     let bad = gen_bad_file();
     let expected = format!("{bad}: .* [(]os error 2[)]");
-    Command::cargo_bin(PRG)?
+    cargo_bin_cmd!()
         .args([ONE, &bad, TWO])
         .assert()
         .stderr(predicate::str::is_match(expected)?);
@@ -107,7 +105,7 @@ fn run(args: &[&str], expected_file: &str) -> Result<()> {
     file.read_to_end(&mut buffer)?;
     let expected = String::from_utf8_lossy(&buffer);
 
-    let output = Command::cargo_bin(PRG)?.args(args).output().expect("fail");
+    let output = cargo_bin_cmd!().args(args).output().expect("fail");
     assert!(output.status.success());
     assert_eq!(String::from_utf8_lossy(&output.stdout), expected);
 
