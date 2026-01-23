@@ -1,6 +1,6 @@
 [workspace]
 resolver = "3"
-members = ["catr", "commr", "cutr","echor", "findr", "grepr", "headr","hello", "learnr", "uniqr", "wcr"]
+members = ["catr", "commr", "cutr","echor", "findr", "grepr", "headr","hello", "learnr", "tailr", "uniqr", "wcr"]
 
 [workspace.dependencies]
 anyhow = "1.0.100"
