@@ -56,6 +56,10 @@ fn main() -> Result<()> {
 }
 
 fn process_file(file: &str, args: &Args, fh: &mut File) {
+    if !args.quiet && args.files.len() > 1 {
+        println!("{file}:");
+    }
+
     match &args.mode {
         Mode::Lines(pos) => todo!(),
         Mode::Bytes(pos) => match process_file_bytes(file, args, fh) {
