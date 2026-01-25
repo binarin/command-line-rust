@@ -1,5 +1,5 @@
 use std::fs::File;
-use std::io::{Seek, SeekFrom};
+use std::io::{BufReader, BufWriter, Read, Seek, SeekFrom, Write};
 
 use anyhow::{Result, anyhow};
 use clap::Parser;
@@ -56,7 +56,6 @@ fn main() -> Result<()> {
 }
 
 fn process_file(file: &str, args: &Args, fh: &mut File) {
-    println!("Opened {file}"); // XXX print header if needed
     match &args.mode {
         Mode::Lines(pos) => todo!(),
         Mode::Bytes(pos) => match process_file_bytes(file, args, fh) {
@@ -67,7 +66,9 @@ fn process_file(file: &str, args: &Args, fh: &mut File) {
 }
 
 fn process_file_bytes(file: &str, args: &Args, fh: &mut File) -> Result<()> {
-    fh.seek(SeekFrom::End(0))?;
+    fh.seek(SeekFrom::End(0))
+        .map_err(|e| anyhow!("{file} - while seeking to the end: {e}"))?;
+
     let len: usize = fh.stream_position()?.try_into()?;
     let Mode::Bytes(start_target) = &args.mode else {
         panic!("mode should be Bytes in process_file_bytes")
@@ -79,6 +80,17 @@ fn process_file_bytes(file: &str, args: &Args, fh: &mut File) -> Result<()> {
     };
 
     fh.seek(SeekFrom::Start(pos.try_into()?))?;
+
+    let mut output = std::io::stdout();
+
+    let mut buf = [0 as u8; 4096];
+    loop {
+        let bytes_read = fh.read(&mut buf)?;
+        if bytes_read == 0 {
+            break;
+        }
+        output.write_all(&buf[0..bytes_read])?;
+    }
 
     Ok(())
 }
