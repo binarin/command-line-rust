@@ -45,15 +45,25 @@ struct Args {
 
 fn main() -> Result<()> {
     let args = parse_args()?;
-    for file in args.files {
+    for file in args.files.clone() {
         match File::open(&file) {
-            Ok(fh) => {
-                println!("Opened file {file}");
-            },
+            Ok(mut fh) => process_file(&file, &args, &mut fh),
             Err(e) => eprintln!("{file}: {e}"),
         }
     }
     Ok(())
+}
+
+fn process_file(file: &str, args: &Args, fh: &mut File) {
+    println!("Opened {file}"); // XXX print header if needed
+    match &args.mode {
+        Mode::Lines(pos) => todo!(),
+        Mode::Bytes(pos) => process_file_bytes(file, args, fh),
+    }
+}
+
+fn process_file_bytes(file: &str, args: &Args, fh: &mut File) {
+    todo!()
 }
 
 fn parse_args() -> Result<Args> {
