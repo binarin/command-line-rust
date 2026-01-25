@@ -1,3 +1,5 @@
+use std::fs::File;
+
 use anyhow::{Result, anyhow};
 use clap::Parser;
 
@@ -43,7 +45,14 @@ struct Args {
 
 fn main() -> Result<()> {
     let args = parse_args()?;
-    dbg!(args);
+    for file in args.files {
+        match File::open(&file) {
+            Ok(fh) => {
+                println!("Opened file {file}");
+            },
+            Err(e) => eprintln!("{file}: {e}"),
+        }
+    }
     Ok(())
 }
 
