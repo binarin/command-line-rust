@@ -1,5 +1,5 @@
 use std::fs::File;
-use std::io::{Read, Seek, SeekFrom, Write};
+use std::io::{BufRead, BufReader, Read, Seek, SeekFrom, Write};
 
 use anyhow::{Result, anyhow};
 use clap::Parser;
@@ -67,12 +67,46 @@ fn process_file(file: &str, args: &Args, fh: &mut File, need_newline_before: &mu
     }
 
     match &args.mode {
-        Mode::Lines(_) => todo!(),
+        Mode::Lines(pos) => match process_file_lines(file, pos, fh) {
+            Ok(_) => (),
+            Err(e) => eprintln!("{file}: {e}"),
+        },
         Mode::Bytes(pos) => match process_file_bytes(file, pos, fh) {
             Ok(_) => (),
             Err(e) => eprintln!("{file}: {e}"),
         },
     }
+}
+
+fn process_file_lines(file: &str, pos: &Pos, fh: &mut File) -> Result<()> {
+    match pos {
+        Pos::FromStart(pos) => BufReader::new(fh)
+            .lines()
+            .skip(*pos)
+            .for_each(|res| match res {
+                Ok(l) => println!("{l}"),
+                Err(e) => eprintln!("{file}: {e}"),
+            }),
+        Pos::FromEnd(pos) => {
+            let line_count = BufReader::new(&mut *fh).lines().count();
+            fh.seek(SeekFrom::Start(0))?;
+
+            let skip = if line_count >= *pos {
+                line_count - *pos
+            } else {
+                0
+            };
+
+            BufReader::new(fh)
+                .lines()
+                .skip(skip)
+                .for_each(|res| match res {
+                    Ok(l) => println!("{l}"),
+                    Err(e) => eprintln!("{file}: {e}"),
+                });
+        }
+    }
+    Ok(())
 }
 
 fn process_file_bytes(file: &str, start_target: &Pos, fh: &mut File) -> Result<()> {
