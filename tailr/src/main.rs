@@ -77,7 +77,13 @@ fn process_file_bytes(file: &str, start_target: &Pos, fh: &mut File) -> Result<(
 
     let pos = match &start_target {
         Pos::FromStart(offset) => std::cmp::min(len, *offset),
-        Pos::FromEnd(negative_offset) => std::cmp::max(0, len - *negative_offset),
+        Pos::FromEnd(negative_offset) => {
+            if *negative_offset > len {
+                0
+            } else {
+                len - *negative_offset
+            }
+        }
     };
 
     fh.seek(SeekFrom::Start(pos.try_into()?))?;
