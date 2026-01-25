@@ -45,12 +45,12 @@ fn dies_no_args() -> Result<()> {
 #[test]
 fn dies_bad_bytes() -> Result<()> {
     let bad = random_string();
-    let expected = format!("illegal byte count -- {bad}");
+    let expected = format!("--bytes.*{bad}: invalid digit found in string");
     cargo_bin_cmd!()
         .args(["-c", &bad, EMPTY])
         .assert()
         .failure()
-        .stderr(predicate::str::contains(expected));
+        .stderr(predicate::str::is_match(expected).unwrap());
 
     Ok(())
 }
@@ -59,7 +59,7 @@ fn dies_bad_bytes() -> Result<()> {
 #[test]
 fn dies_bad_lines() -> Result<()> {
     let bad = random_string();
-    let expected = format!("illegal line count -- {bad}");
+    let expected = format!("{bad}: invalid digit found in string");
     cargo_bin_cmd!()
         .args(["-n", &bad, EMPTY])
         .assert()
