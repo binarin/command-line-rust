@@ -61,22 +61,19 @@ fn process_file(file: &str, args: &Args, fh: &mut File) {
     }
 
     match &args.mode {
-        Mode::Lines(pos) => todo!(),
-        Mode::Bytes(pos) => match process_file_bytes(file, args, fh) {
+        Mode::Lines(_) => todo!(),
+        Mode::Bytes(pos) => match process_file_bytes(file, pos, fh) {
             Ok(_) => (),
             Err(e) => eprintln!("{file}: {e}"),
         },
     }
 }
 
-fn process_file_bytes(file: &str, args: &Args, fh: &mut File) -> Result<()> {
+fn process_file_bytes(file: &str, start_target: &Pos, fh: &mut File) -> Result<()> {
     fh.seek(SeekFrom::End(0))
         .map_err(|e| anyhow!("{file} - while seeking to the end: {e}"))?;
 
     let len: usize = fh.stream_position()?.try_into()?;
-    let Mode::Bytes(start_target) = &args.mode else {
-        panic!("mode should be Bytes in process_file_bytes")
-    };
 
     let pos = match &start_target {
         Pos::FromStart(offset) => std::cmp::min(len, *offset),
