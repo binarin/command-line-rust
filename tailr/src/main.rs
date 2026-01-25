@@ -21,7 +21,7 @@ enum Mode {
 #[command(about, author, version)]
 struct CLIArgs {
     /// Input file(s)
-    #[arg(value_name = "FILE")]
+    #[arg(value_name = "FILE", required = true)]
     files: Vec<String>,
 
     /// Number of lines
