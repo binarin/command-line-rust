@@ -68,7 +68,18 @@ fn process_file(file: &str, args: &Args, fh: &mut File) {
 
 fn process_file_bytes(file: &str, args: &Args, fh: &mut File) -> Result<()> {
     fh.seek(SeekFrom::End(0))?;
-    let len = fh.stream_position()?;
+    let len: usize = fh.stream_position()?.try_into()?;
+    let Mode::Bytes(start_target) = &args.mode else {
+        panic!("mode should be Bytes in process_file_bytes")
+    };
+
+    let pos = match &start_target {
+        Pos::FromStart(offset) => std::cmp::min(len, *offset),
+        Pos::FromEnd(negative_offset) => std::cmp::max(0, *negative_offset),
+    };
+
+    fh.seek(SeekFrom::Start(pos.try_into()?))?;
+
     Ok(())
 }
 
