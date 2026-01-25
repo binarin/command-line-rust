@@ -1,4 +1,5 @@
 use std::fs::File;
+use std::io::{Seek, SeekFrom};
 
 use anyhow::{Result, anyhow};
 use clap::Parser;
@@ -66,7 +67,9 @@ fn process_file(file: &str, args: &Args, fh: &mut File) {
 }
 
 fn process_file_bytes(file: &str, args: &Args, fh: &mut File) -> Result<()> {
-    todo!()
+    fh.seek(SeekFrom::End(0))?;
+    let len = fh.stream_position()?;
+    Ok(())
 }
 
 fn parse_args() -> Result<Args> {
