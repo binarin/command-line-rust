@@ -129,8 +129,9 @@ fn parse_pos(arg: &str) -> Result<Pos> {
         _ => (false, arg),
     };
     let num: usize = num.parse().map_err(|err| anyhow!("{arg}: {err}"))?;
+
     match from_start {
-        true => Ok(Pos::FromStart(num)),
+        true => Ok(Pos::FromStart(if num > 0 { num - 1 } else { 0 })), // ‘+n’ are one-base indexed (and ‘+0’ is an exception)
         false => Ok(Pos::FromEnd(num)),
     }
 }
@@ -151,7 +152,7 @@ mod tests {
         // leading "+"
         let res = parse_pos("+3");
         assert!(res.is_ok());
-        assert_eq!(res.unwrap(), FromStart(3));
+        assert_eq!(res.unwrap(), FromStart(2));
 
         // An explicit "-" prefix is the same as no prefix
         let res = parse_pos("-3");
@@ -171,7 +172,7 @@ mod tests {
         // Test boundaries
         let res = parse_pos(format!("+{}", usize::MAX).as_str());
         assert!(res.is_ok());
-        assert_eq!(res.unwrap(), FromStart(usize::MAX));
+        assert_eq!(res.unwrap(), FromStart(usize::MAX - 1));
 
         // A floating-point value is invalid
         let res = parse_pos("3.14");
