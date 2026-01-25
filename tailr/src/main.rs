@@ -58,11 +58,14 @@ fn process_file(file: &str, args: &Args, fh: &mut File) {
     println!("Opened {file}"); // XXX print header if needed
     match &args.mode {
         Mode::Lines(pos) => todo!(),
-        Mode::Bytes(pos) => process_file_bytes(file, args, fh),
+        Mode::Bytes(pos) => match process_file_bytes(file, args, fh) {
+            Ok(_) => (),
+            Err(e) => eprintln!("{file}: {e}"),
+        },
     }
 }
 
-fn process_file_bytes(file: &str, args: &Args, fh: &mut File) {
+fn process_file_bytes(file: &str, args: &Args, fh: &mut File) -> Result<()> {
     todo!()
 }
 
