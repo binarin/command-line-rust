@@ -46,18 +46,24 @@ struct Args {
 
 fn main() -> Result<()> {
     let args = parse_args()?;
+    let mut need_newline_before = false;
+
     for file in args.files.clone() {
         match File::open(&file) {
-            Ok(mut fh) => process_file(&file, &args, &mut fh),
+            Ok(mut fh) => process_file(&file, &args, &mut fh, &mut need_newline_before),
             Err(e) => eprintln!("{file}: {e}"),
         }
     }
     Ok(())
 }
 
-fn process_file(file: &str, args: &Args, fh: &mut File) {
+fn process_file(file: &str, args: &Args, fh: &mut File, need_newline_before: &mut bool) {
     if !args.quiet && args.files.len() > 1 {
-        println!("{file}:");
+        if *need_newline_before {
+            println!();
+        }
+        println!("==> {file} <==");
+        *need_newline_before = true;
     }
 
     match &args.mode {
