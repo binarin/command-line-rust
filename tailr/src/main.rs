@@ -81,9 +81,10 @@ fn bytes_seek_pos(pos: &Pos, fh: &mut File) -> Result<SeekFrom> {
 
     let len: usize = fh.stream_position()?.try_into()?;
 
+    // NOTE: SeekFrom::Start(u64), but SeekFrom::End(i64)
     match pos {
         Pos::FromStart(offset) => Ok(SeekFrom::Start(std::cmp::min(len, *offset).try_into()?)),
-        Pos::FromEnd(offset) => Ok(SeekFrom::End(std::cmp::min(len, *offset).try_into()?)),
+        Pos::FromEnd(offset) => Ok(SeekFrom::End(-std::cmp::min(len, *offset).try_into()?)),
     }
 }
 
