@@ -48,7 +48,7 @@ fn main() -> Result<()> {
     let args = parse_args()?;
     let mut need_newline_before = false;
 
-    for file in args.files.clone() {
+    for file in &args.files {
         match File::open(&file) {
             Ok(mut fh) => process_file(&file, &args, &mut fh, &mut need_newline_before),
             Err(e) => eprintln!("{file}: {e}"),
