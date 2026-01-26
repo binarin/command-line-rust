@@ -49,15 +49,15 @@ fn main() -> Result<()> {
     let mut need_newline_before = false;
 
     for file in &args.files {
-        match File::open(&file) {
-            Ok(mut fh) => process_file(&file, &args, &mut fh, &mut need_newline_before),
-            Err(e) => eprintln!("{file}: {e}"),
-        }
+        _ = process_file(&file, &args, &mut need_newline_before)
+            .map_err(|e| eprintln!("{file}: {e}"));
     }
     Ok(())
 }
 
-fn process_file(file: &str, args: &Args, fh: &mut File, need_newline_before: &mut bool) {
+fn process_file(file: &str, args: &Args, need_newline_before: &mut bool) -> Result<()> {
+    let mut fh = File::open(file)?;
+
     if !args.quiet && args.files.len() > 1 {
         if *need_newline_before {
             println!();
@@ -66,67 +66,33 @@ fn process_file(file: &str, args: &Args, fh: &mut File, need_newline_before: &mu
         *need_newline_before = true;
     }
 
-    match &args.mode {
-        Mode::Lines(pos) => match process_file_lines(file, pos, fh) {
-            Ok(_) => (),
-            Err(e) => eprintln!("{file}: {e}"),
-        },
-        Mode::Bytes(pos) => match process_file_bytes(file, pos, fh) {
-            Ok(_) => (),
-            Err(e) => eprintln!("{file}: {e}"),
-        },
-    }
-}
+    let seek_pos = match &args.mode {
+        Mode::Lines(pos) => lines_seek_pos(pos, &mut fh)?,
+        Mode::Bytes(pos) => bytes_seek_pos(pos, &mut fh)?,
+    };
 
-fn process_file_lines(file: &str, pos: &Pos, fh: &mut File) -> Result<()> {
-    match pos {
-        Pos::FromStart(pos) => BufReader::new(fh)
-            .lines()
-            .skip(*pos)
-            .for_each(|res| match res {
-                Ok(l) => println!("{l}"),
-                Err(e) => eprintln!("{file}: {e}"),
-            }),
-        Pos::FromEnd(pos) => {
-            let line_count = BufReader::new(&mut *fh).lines().count();
-            fh.seek(SeekFrom::Start(0))?;
+    copy_to_stdout(&mut fh, &seek_pos)?;
 
-            let skip = if line_count >= *pos {
-                line_count - *pos
-            } else {
-                0
-            };
-
-            BufReader::new(fh)
-                .lines()
-                .skip(skip)
-                .for_each(|res| match res {
-                    Ok(l) => println!("{l}"),
-                    Err(e) => eprintln!("{file}: {e}"),
-                });
-        }
-    }
     Ok(())
 }
 
-fn process_file_bytes(file: &str, start_target: &Pos, fh: &mut File) -> Result<()> {
-    fh.seek(SeekFrom::End(0))
-        .map_err(|e| anyhow!("{file} - while seeking to the end: {e}"))?;
+fn bytes_seek_pos(pos: &Pos, fh: &mut File) -> Result<SeekFrom> {
+    fh.seek(SeekFrom::End(0))?;
 
     let len: usize = fh.stream_position()?.try_into()?;
 
-    let pos = match &start_target {
-        Pos::FromStart(offset) => std::cmp::min(len, *offset),
-        Pos::FromEnd(negative_offset) => {
-            if *negative_offset > len {
-                0
-            } else {
-                len - *negative_offset
-            }
-        }
-    };
+    match pos {
+        Pos::FromStart(offset) => Ok(SeekFrom::Start(std::cmp::min(len, *offset).try_into()?)),
+        Pos::FromEnd(offset) => Ok(SeekFrom::End(std::cmp::min(len, *offset).try_into()?)),
+    }
+}
 
-    fh.seek(SeekFrom::Start(pos.try_into()?))?;
+fn lines_seek_pos(pos: &Pos, fh: &mut File) -> Result<SeekFrom> {
+    Ok(SeekFrom::Start(0))
+}
+
+fn copy_to_stdout(fh: &mut File, seek: &SeekFrom) -> Result<()> {
+    fh.seek(*seek)?;
 
     let mut output = std::io::stdout();
 
