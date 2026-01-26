@@ -89,7 +89,33 @@ fn bytes_seek_pos(pos: &Pos, fh: &mut File) -> Result<SeekFrom> {
 }
 
 fn lines_seek_pos(pos: &Pos, fh: &mut File) -> Result<SeekFrom> {
-    Ok(SeekFrom::Start(0))
+    match pos {
+        Pos::FromStart(offset) => {
+            let mut buf = [0 as u8; 4096];
+            let mut rem = *offset;
+            let mut skip_byte: usize = 0;
+            'outer: loop {
+                if rem == 0 {
+                    break;
+                }
+                let bytes_read = fh.read(&mut buf)?;
+                if bytes_read == 0 {
+                    break;
+                }
+                for byte in &buf[0..bytes_read] {
+                    skip_byte += 1;
+                    if *byte == '\n' as u8 {
+                        rem -= 1;
+                        if rem == 0 {
+                            break 'outer;
+                        }
+                    }
+                }
+            }
+            Ok(SeekFrom::Start(skip_byte.try_into()?))
+        }
+        Pos::FromEnd(offset) => todo!(),
+    }
 }
 
 fn copy_to_stdout(fh: &mut File, seek: &SeekFrom) -> Result<()> {
