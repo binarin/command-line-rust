@@ -47,11 +47,11 @@ fn run(args: Args) -> Result<()> {
     for (file_no, filename) in args.files.iter().enumerate() {
         if multifile {
             if file_no > 0 {
-                print!("\n");
+                println!();
             }
             println!("==> {filename} <==");
         }
-        open(&filename)
+        open(filename)
             .and_then(|file| process_file(file, args.lines, args.bytes))
             .unwrap_or_else(|err| eprintln!("{filename}: {err}"));
     }
@@ -80,11 +80,11 @@ fn process_bytes(mut file: Box<dyn BufRead>, bytes: u64) -> Result<()> {
         }
 
         if bytes <= bytes_read {
-            stdout.write(&buf[0..bytes])?;
+            stdout.write_all(&buf[0..bytes])?;
             break;
         }
 
-        stdout.write(&buf)?;
+        stdout.write_all(buf)?;
         bytes -= bytes_read;
 
         file.consume(bytes_read);

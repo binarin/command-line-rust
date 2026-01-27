@@ -71,7 +71,7 @@ fn main() -> Result<()> {
                 if args.insensitive {
                     s1.to_lowercase().cmp(&s2.to_lowercase())
                 } else {
-                    s1.cmp(&s2)
+                    s1.cmp(s2)
                 }
             }
 

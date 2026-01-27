@@ -50,7 +50,7 @@ fn run(args: Args) -> Result<()> {
     let mut totals = FileInfo::default();
 
     for filename in &args.files {
-        open(&filename)
+        open(filename)
             .and_then(|file| {
                 let fi = count(file)?;
                 totals.num_lines += fi.num_lines;
@@ -68,7 +68,7 @@ fn run(args: Args) -> Result<()> {
             .unwrap_or_else(|err| eprintln!("{filename}: {err}"));
     }
     if args.files.len() > 1 {
-        println!("{}{}", render_file_info(&totals, &args), " total");
+        println!("{} total", render_file_info(&totals, &args));
     }
     Ok(())
 }

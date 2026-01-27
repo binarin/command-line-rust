@@ -25,7 +25,6 @@ fn run(args: Args) -> Result<()> {
         match open(&filename) {
             Err(err) => {
                 eprintln!("Failed to open {filename}: {err}");
-                ()
             }
             Ok(file) => print_file(file, args.number_lines, args.number_nonblank_lines)?,
         }
@@ -41,7 +40,7 @@ fn print_file(
     let mut ctr: u32 = 1;
     for line_res in file.lines() {
         let line = line_res?;
-        if number_lines || (number_nonblank_lines && line != "") {
+        if number_lines || (number_nonblank_lines && !line.is_empty()) {
             print!("{ctr:6}\t");
             ctr += 1;
         }

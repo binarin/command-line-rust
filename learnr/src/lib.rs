@@ -12,7 +12,7 @@ pub fn open(filename: &CLIInput) -> Result<Box<dyn BufRead>> {
     match filename {
         CLIInput::StdIn => Ok(Box::new(BufReader::new(std::io::stdin()))),
         CLIInput::File(path) => Ok(Box::new(BufReader::new(
-            File::open(&path).map_err(|err| anyhow!("{}: {err}", path))?,
+            File::open(path).map_err(|err| anyhow!("{}: {err}", path))?,
         )))
     }
 }
