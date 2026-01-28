@@ -7,6 +7,7 @@ use std::{
 
 use anyhow::Result;
 use clap::Parser;
+use rand::{Rng, SeedableRng, rngs::StdRng};
 use regex::{Regex, RegexBuilder};
 use walkdir::WalkDir;
 
@@ -137,7 +138,15 @@ fn read_fortunes(paths: &[PathBuf]) -> Result<Vec<Fortune>> {
 }
 
 fn pick_fortune(fortunes: &[Fortune], seed: Option<u64>) -> Option<String> {
-    unimplemented!()
+    if fortunes.is_empty() {
+        return None;
+    }
+    let mut rng = match seed {
+        Some(seed) => StdRng::seed_from_u64(seed),
+        None => StdRng::from_rng(rand::thread_rng()).expect("seeding from thread_rnd"),
+    };
+    let pick = rng.gen_range(0..fortunes.len());
+    Some(fortunes[pick].text.clone())
 }
 
 #[cfg(test)]
