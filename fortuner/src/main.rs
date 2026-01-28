@@ -116,10 +116,11 @@ fn find_single_source(path: &String) -> Result<Vec<PathBuf>> {
             continue;
         }
 
-        if let Some(name) = path.file_name() {
-            if name.len() > 0 && name.as_bytes()[0] == b'.' {
-                continue;
-            }
+        if let Some(name) = path.file_name()
+            && !name.is_empty()
+            && name.as_bytes()[0] == b'.'
+        {
+            continue;
         }
 
         result.push(path);
@@ -149,7 +150,7 @@ fn read_fortunes(paths: &[PathBuf]) -> Result<Vec<Fortune>> {
                 break;
             }
             let text = String::from_utf8_lossy(&buf)
-                .trim_matches(&['%', '\n'])
+                .trim_matches(['%', '\n'])
                 .to_string();
             if text.is_empty() {
                 continue;
@@ -192,7 +193,7 @@ mod tests {
         let files = res.unwrap();
         assert_eq!(files.len(), 1);
         assert_eq!(
-            files.get(0).unwrap().to_string_lossy(),
+            files.first().unwrap().to_string_lossy(),
             "./tests/inputs/jokes"
         );
         // Fails to find a bad file
@@ -204,7 +205,7 @@ mod tests {
         // Check number and order of files
         let files = res.unwrap();
         assert_eq!(files.len(), 4);
-        let first = files.get(0).unwrap().display().to_string();
+        let first = files.first().unwrap().display().to_string();
         assert!(first.contains("ascii-art"));
         let last = files.last().unwrap().display().to_string();
         assert!(last.contains("quotes"));
