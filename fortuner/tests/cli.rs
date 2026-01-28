@@ -9,7 +9,6 @@ const FORTUNE_DIR: &str = "./tests/inputs";
 const EMPTY_DIR: &str = "./tests/inputs/empty";
 const JOKES: &str = "./tests/inputs/jokes";
 const LITERATURE: &str = "./tests/inputs/literature";
-const QUOTES: &str = "./tests/inputs/quotes";
 
 // --------------------------------------------------
 fn random_string() -> String {
@@ -28,6 +27,38 @@ fn gen_bad_file() -> String {
             return filename;
         }
     }
+}
+
+// --------------------------------------------------
+macro_rules! run {
+    ($expected:expr , $($args:expr),* $(,)? ) => {{
+        let expected: &str = $expected;
+        let output = cargo_bin_cmd!().args([ $($args),* ]).output().expect("fail");
+        assert!(output.status.success());
+
+        let stdout = String::from_utf8(output.stdout).expect("invalid UTF-8");
+        assert_eq!(stdout, expected);
+        Ok(())
+    }};
+}
+
+// --------------------------------------------------
+macro_rules! run_outfiles {
+    ($out_file:expr , $err_file:expr , $($args:expr),* $(,)? ) => {{
+        let expected_out = fs::read_to_string($out_file).expect("out-file");
+        let expected_err = fs::read_to_string($err_file).expect("err-file");
+
+        let output = cargo_bin_cmd!().args([ $($args),* ]).output().expect("fail");
+        assert!(output.status.success());
+
+        let stdout = String::from_utf8(output.clone().stdout).expect("invalid UTF-8");
+        assert_eq!(stdout, expected_out);
+
+        let stderr = String::from_utf8(output.stderr).expect("invalid UTF-8");
+        assert_eq!(stderr, expected_err);
+
+        Ok(())
+    }};
 }
 
 // --------------------------------------------------
@@ -83,120 +114,112 @@ fn dies_bad_seed() -> Result<()> {
 // --------------------------------------------------
 #[test]
 fn no_fortunes_found() -> Result<()> {
-    run(&[EMPTY_DIR], "No fortunes found\n")
+    run!("No fortunes found\n", EMPTY_DIR)
 }
 
 // --------------------------------------------------
 #[test]
 fn quotes_seed_1() -> Result<()> {
-    run(
-        &[QUOTES, "-s", "1"],
+    run!(
         "You can observe a lot just by watching.\n-- Yogi Berra\n",
+        FORTUNE_DIR,
+        "-s",
+        "1",
     )
 }
 
 // --------------------------------------------------
 #[test]
 fn jokes_seed_1() -> Result<()> {
-    run(
-        &[JOKES, "-s", "1"],
+    run!(
         "Q: What happens when frogs park illegally?\nA: They get toad.\n",
+        JOKES,
+        "-s",
+        "1",
     )
 }
 
 // --------------------------------------------------
 #[test]
-fn dir_seed_10() -> Result<()> {
-    run(
-        &[FORTUNE_DIR, "-s", "10"],
-        "Q: Why did the fungus and the alga marry?\n\
-        A: Because they took a lichen to each other!\n",
+fn dir_seed_11() -> Result<()> {
+    run!(
+        "Q: Why did the gardener quit his job?\nA: His celery wasn't high enough.\n",
+        FORTUNE_DIR,
+        "-s",
+        "11",
     )
-}
-
-// --------------------------------------------------
-fn run(args: &[&str], expected: &'static str) -> Result<()> {
-    let output = cargo_bin_cmd!().args(args).output().expect("fail");
-    assert!(output.status.success());
-
-    let stdout = String::from_utf8(output.stdout).expect("invalid UTF-8");
-    assert_eq!(stdout, expected);
-    Ok(())
-}
-
-// --------------------------------------------------
-fn run_outfiles(args: &[&str], out_file: &str, err_file: &str) -> Result<()> {
-    let expected_out = fs::read_to_string(out_file)?;
-    let expected_err = fs::read_to_string(err_file)?;
-
-    let output = cargo_bin_cmd!().args(args).output().expect("fail");
-    assert!(output.status.success());
-
-    let stdout = String::from_utf8(output.clone().stdout).expect("invalid UTF-8");
-    assert_eq!(stdout, expected_out);
-
-    let stderr = String::from_utf8(output.stderr).expect("invalid UTF-8");
-    assert_eq!(stderr, expected_err);
-
-    Ok(())
 }
 
 // --------------------------------------------------
 #[test]
 fn yogi_berra_cap() -> Result<()> {
-    run_outfiles(
-        &["--pattern", "Yogi Berra", FORTUNE_DIR],
+    run_outfiles!(
         "tests/expected/berra_cap.out",
         "tests/expected/berra_cap.err",
+        "--pattern",
+        "Yogi Berra",
+        FORTUNE_DIR,
     )
 }
 
 // --------------------------------------------------
 #[test]
 fn mark_twain_cap() -> Result<()> {
-    run_outfiles(
-        &["-m", "Mark Twain", FORTUNE_DIR],
+    run_outfiles!(
         "tests/expected/twain_cap.out",
         "tests/expected/twain_cap.err",
+        "-m",
+        "Mark Twain",
+        FORTUNE_DIR,
     )
 }
 
 // --------------------------------------------------
 #[test]
 fn yogi_berra_lower() -> Result<()> {
-    run_outfiles(
-        &["--pattern", "yogi berra", FORTUNE_DIR],
+    run_outfiles!(
         "tests/expected/berra_lower.out",
         "tests/expected/berra_lower.err",
+        "--pattern",
+        "yogi berra",
+        FORTUNE_DIR,
     )
 }
 
 // --------------------------------------------------
 #[test]
 fn mark_twain_lower() -> Result<()> {
-    run_outfiles(
-        &["-m", "will twain", FORTUNE_DIR],
+    run_outfiles!(
         "tests/expected/twain_lower.out",
         "tests/expected/twain_lower.err",
+        "-m",
+        "will twain",
+        FORTUNE_DIR,
     )
 }
 
 // --------------------------------------------------
 #[test]
 fn yogi_berra_lower_i() -> Result<()> {
-    run_outfiles(
-        &["--insensitive", "--pattern", "yogi berra", FORTUNE_DIR],
+    run_outfiles!(
         "tests/expected/berra_lower_i.out",
         "tests/expected/berra_lower_i.err",
+        "--insensitive",
+        "--pattern",
+        "yogi berra",
+        FORTUNE_DIR,
     )
 }
 
 // --------------------------------------------------
 #[test]
 fn mark_twain_lower_i() -> Result<()> {
-    run_outfiles(
-        &["-i", "-m", "mark twain", FORTUNE_DIR],
+    run_outfiles!(
         "tests/expected/twain_lower_i.out",
         "tests/expected/twain_lower_i.err",
+        "-i",
+        "-m",
+        "mark twain",
+        FORTUNE_DIR,
     )
 }

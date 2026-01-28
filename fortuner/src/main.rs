@@ -36,6 +36,7 @@ struct CLIArgs {
 struct Args {
     sources: Vec<PathBuf>,
     pattern: Option<Regex>,
+    seed: Option<u64>,
 }
 
 #[derive(Debug)]
@@ -46,7 +47,29 @@ struct Fortune {
 
 fn main() -> Result<()> {
     let args = parse_args()?;
-    dbg!(args);
+    let fortunes = read_fortunes(&args.sources)?;
+    match &args.pattern {
+        None => {
+            if fortunes.is_empty() {
+                println!("No fortunes found");
+                return Ok(());
+            }
+            let fortune = pick_fortune(&fortunes, args.seed).unwrap();
+            println!("{}", fortune);
+        }
+        Some(pattern) => {
+            let mut prev_source: Option<String> = None;
+            for Fortune { text, source } in fortunes {
+                if pattern.is_match(&text) {
+                    if prev_source != Some(source.clone()) {
+                        eprintln!("({source})\n%");
+                        prev_source = Some(source.clone());
+                    }
+                    println!("{}\n%", text);
+                }
+            }
+        }
+    }
     Ok(())
 }
 
@@ -55,7 +78,7 @@ fn parse_args() -> Result<Args> {
         sources,
         pattern,
         insensitive,
-        ..
+        seed,
     } = CLIArgs::parse();
 
     let pattern = pattern
@@ -68,7 +91,11 @@ fn parse_args() -> Result<Args> {
 
     let sources = find_files(&sources)?;
 
-    Ok(Args { sources, pattern })
+    Ok(Args {
+        sources,
+        pattern,
+        seed,
+    })
 }
 
 fn find_single_source(path: &String) -> Result<Vec<PathBuf>> {
@@ -128,7 +155,11 @@ fn read_fortunes(paths: &[PathBuf]) -> Result<Vec<Fortune>> {
                 continue;
             }
             result.push(Fortune {
-                source: path.to_string_lossy().to_string(),
+                source: path
+                    .file_name()
+                    .expect("source should have filename")
+                    .to_string_lossy()
+                    .into_owned(),
                 text,
             });
         }
@@ -201,7 +232,6 @@ mod tests {
         let res = read_fortunes(&[PathBuf::from("./tests/inputs/jokes")]);
         assert!(res.is_ok());
         if let Ok(fortunes) = res {
-            dbg!(&fortunes);
             // Correct number and sorting
             assert_eq!(fortunes.len(), 6);
             assert_eq!(
