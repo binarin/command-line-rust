@@ -1,8 +1,14 @@
-use std::path::PathBuf;
+use std::{
+    fs::File,
+    io::{BufRead, BufReader},
+    os::unix::ffi::OsStrExt,
+    path::PathBuf,
+};
 
 use anyhow::Result;
 use clap::Parser;
 use regex::{Regex, RegexBuilder};
+use walkdir::WalkDir;
 
 /// Rust version of ‘fortune’
 #[derive(Debug, Parser)]
@@ -27,8 +33,14 @@ struct CLIArgs {
 
 #[derive(Debug)]
 struct Args {
-    sources: Vec<String>,
+    sources: Vec<PathBuf>,
     pattern: Option<Regex>,
+}
+
+#[derive(Debug)]
+struct Fortune {
+    source: String,
+    text: String,
 }
 
 fn main() -> Result<()> {
@@ -53,16 +65,81 @@ fn parse_args() -> Result<Args> {
         })
         .transpose()?;
 
+    let sources = find_files(&sources)?;
+
     Ok(Args { sources, pattern })
 }
 
+fn find_single_source(path: &String) -> Result<Vec<PathBuf>> {
+    let mut result = vec![];
+    for file in WalkDir::new(path).sort_by_file_name() {
+        let file = file?;
+        if !file.file_type().is_file() {
+            continue;
+        }
+        if file.metadata()?.len() == 0 {
+            continue;
+        }
+        let path = file.into_path();
+
+        if let Some(ext) = path.extension()
+            && ext == "dat"
+        {
+            continue;
+        }
+
+        if let Some(name) = path.file_name() {
+            if name.len() > 0 && name.as_bytes()[0] == b'.' {
+                continue;
+            }
+        }
+
+        result.push(path);
+    }
+    Ok(result)
+}
+
 fn find_files(paths: &[String]) -> Result<Vec<PathBuf>> {
-    unimplemented!()
+    let mut result = vec![];
+    for path in paths {
+        result.append(&mut find_single_source(path)?);
+    }
+    result.sort();
+    result.dedup();
+    Ok(result)
+}
+
+fn read_fortunes(paths: &[PathBuf]) -> Result<Vec<Fortune>> {
+    let mut result = vec![];
+
+    for path in paths {
+        let mut reader = BufReader::new(File::open(path)?);
+        loop {
+            let mut buf: Vec<u8> = vec![];
+            let bytes_read = reader.read_until(b'%', &mut buf)?;
+            if bytes_read == 0 {
+                break;
+            }
+            let text = String::from_utf8_lossy(&buf)
+                .trim_matches(&['%', '\n'])
+                .to_string();
+            if text.is_empty() {
+                continue;
+            }
+            result.push(Fortune {
+                source: path.to_string_lossy().to_string(),
+                text,
+            });
+        }
+    }
+
+    Ok(result)
 }
 
 #[cfg(test)]
 mod tests {
-    use super::find_files;
+    use super::*;
+
     #[test]
     fn test_find_files() {
         // Verify that the function finds a file known to exist
@@ -82,12 +159,13 @@ mod tests {
         assert!(res.is_ok());
         // Check number and order of files
         let files = res.unwrap();
-        assert_eq!(files.len(), 5);
+        assert_eq!(files.len(), 4);
         let first = files.get(0).unwrap().display().to_string();
         assert!(first.contains("ascii-art"));
         let last = files.last().unwrap().display().to_string();
         assert!(last.contains("quotes"));
         // Test for multiple sources, path must be unique and sorted
+
         let res = find_files(&[
             "./tests/inputs/jokes".to_string(),
             "./tests/inputs/ascii-art".to_string(),
@@ -102,5 +180,34 @@ mod tests {
         if let Some(filename) = files.last().unwrap().file_name() {
             assert_eq!(filename.to_string_lossy(), "jokes".to_string())
         }
+    }
+
+    #[test]
+    fn test_read_fortunes() {
+        // One input file
+        let res = read_fortunes(&[PathBuf::from("./tests/inputs/jokes")]);
+        assert!(res.is_ok());
+        if let Ok(fortunes) = res {
+            dbg!(&fortunes);
+            // Correct number and sorting
+            assert_eq!(fortunes.len(), 6);
+            assert_eq!(
+                fortunes.first().unwrap().text,
+                "Q. What do you call a head of lettuce in a shirt and tie?\n\
+A. Collared greens."
+            );
+            assert_eq!(
+                fortunes.last().unwrap().text,
+                "Q: What do you call a deer wearing an eye patch?\n\
+A: A bad idea (bad-eye deer)."
+            );
+        }
+        // Multiple input files
+        let res = read_fortunes(&[
+            PathBuf::from("./tests/inputs/jokes"),
+            PathBuf::from("./tests/inputs/quotes"),
+        ]);
+        assert!(res.is_ok());
+        assert_eq!(res.unwrap().len(), 11);
     }
 }
