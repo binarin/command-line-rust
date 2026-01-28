@@ -58,7 +58,7 @@ fn dies_bad_file() -> Result<()> {
 // --------------------------------------------------
 #[test]
 fn dies_bad_pattern() -> Result<()> {
-    let expected = r#"Invalid --pattern "*""#;
+    let expected = r#"Error: regex parse error:"#;
     cargo_bin_cmd!()
         .args(["--pattern", "*", LITERATURE])
         .assert()
