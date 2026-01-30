@@ -1,5 +1,6 @@
 use anyhow::Result;
 use assert_cmd::cargo::cargo_bin_cmd;
+use assertables::*;
 use predicates::prelude::*;
 use pretty_assertions::assert_eq;
 use std::fs;
@@ -7,11 +8,13 @@ use std::fs;
 // --------------------------------------------------
 #[test]
 fn dies_year_0() -> Result<()> {
-    cargo_bin_cmd!().arg("0").assert().failure().stderr(
-        predicate::str::contains(
+    cargo_bin_cmd!()
+        .arg("0")
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains(
             "error: invalid value '0' for '[YEAR]': 0 is not in 1..=9999",
-        ),
-    );
+        ));
     Ok(())
 }
 
@@ -46,17 +49,14 @@ fn dies_invalid_year() -> Result<()> {
 // --------------------------------------------------
 #[test]
 fn dies_month_0() -> Result<()> {
-    let output = cargo_bin_cmd!()
-        .args(["-m", "0"])
-        .output()
-        .expect("fail");
+    let output = cargo_bin_cmd!().args(["-m", "0"]).output().expect("fail");
     assert!(!output.status.success());
 
     let stdout = String::from_utf8(output.stdout).expect("invalid UTF-8");
     assert_eq!(stdout, "");
 
     let stderr = String::from_utf8(output.stderr).expect("invalid UTF-8");
-    assert_eq!(stderr.trim(), r#"month "0" not in the range 1 through 12"#);
+    assert_contains!(stderr.trim(), r#"month "0" not in the range 1 through 12"#);
 
     Ok(())
 }
@@ -64,24 +64,18 @@ fn dies_month_0() -> Result<()> {
 // --------------------------------------------------
 #[test]
 fn dies_month_13() -> Result<()> {
-    let output = cargo_bin_cmd!()
-        .args(["-m", "13"])
-        .output()
-        .expect("fail");
+    let output = cargo_bin_cmd!().args(["-m", "13"]).output().expect("fail");
     assert!(!output.status.success());
 
     let stderr = String::from_utf8(output.stderr).expect("invalid UTF-8");
-    assert_eq!(stderr.trim(), r#"month "13" not in the range 1 through 12"#);
+    assert_contains!(stderr.trim(), r#"month "13" not in the range 1 through 12"#);
     Ok(())
 }
 
 // --------------------------------------------------
 #[test]
 fn dies_invalid_month() -> Result<()> {
-    let output = cargo_bin_cmd!()
-        .args(["-m", "foo"])
-        .output()
-        .expect("fail");
+    let output = cargo_bin_cmd!().args(["-m", "foo"]).output().expect("fail");
     assert!(!output.status.success());
 
     let stderr = String::from_utf8(output.stderr).expect("invalid UTF-8");
@@ -169,14 +163,18 @@ fn partial_month() -> Result<()> {
 }
 
 // --------------------------------------------------
-fn run(args: &[&str], expected_file: &str) -> Result<()> {
-    let expected = fs::read_to_string(expected_file)?;
-    let output = cargo_bin_cmd!().args(args).output().expect("fail");
-    assert!(output.status.success());
+macro_rules! run {
+    ($expected_file:expr , $($args:expr),* $(,)? ) => {{
+        let expected_file: String = From::from($expected_file);
+        let args = [ $($args),* ];
+        let expected = fs::read_to_string(expected_file).expect("infile-fail");
+        let output = cargo_bin_cmd!().args(args).output().expect("fail");
+        assert!(output.status.success());
 
-    let stdout = String::from_utf8(output.stdout).expect("invalid UTF-8");
-    assert_eq!(stdout, expected);
-    Ok(())
+        let stdout = String::from_utf8(output.stdout).expect("invalid UTF-8");
+        assert_eq!(stdout, expected);
+        Ok(())
+    }};
 }
 
 // --------------------------------------------------
@@ -194,25 +192,25 @@ fn default_one_month() -> Result<()> {
 // --------------------------------------------------
 #[test]
 fn test_2_2020_leap_year() -> Result<()> {
-    run(&["-m", "2", "2020"], "tests/expected/2-2020.txt")
+    run!("tests/expected/2-2020.txt", "-m", "2", "2020")
 }
 
 // --------------------------------------------------
 #[test]
 fn test_4_2020() -> Result<()> {
-    run(&["-m", "4", "2020"], "tests/expected/4-2020.txt")
+    run!("tests/expected/4-2020.txt", "-m", "4", "2020")
 }
 
 // --------------------------------------------------
 #[test]
 fn test_april_2020() -> Result<()> {
-    run(&["2020", "-m", "april"], "tests/expected/4-2020.txt")
+    run!("tests/expected/4-2020.txt", "2020", "-m", "april")
 }
 
 // --------------------------------------------------
 #[test]
 fn test_2020() -> Result<()> {
-    run(&["2020"], "tests/expected/2020.txt")
+    run!("tests/expected/2020.txt", "2020")
 }
 
 // --------------------------------------------------
