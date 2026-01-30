@@ -159,6 +159,7 @@ dependencies = [
  "ansi_term",
  "anyhow",
  "assert_cmd",
+ "assertables",
  "chrono",
  "clap 4.5.54",
  "itertools",
