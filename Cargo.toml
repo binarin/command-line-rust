@@ -1,6 +1,6 @@
 [workspace]
 resolver = "3"
-members = ["catr", "commr", "cutr","echor", "findr", "fortuner", "grepr", "headr","hello", "learnr", "tailr", "uniqr", "wcr"]
+members = ["calr","catr", "commr", "cutr","echor", "findr", "fortuner", "grepr", "headr","hello", "learnr", "tailr", "uniqr", "wcr"]
 
 [workspace.dependencies]
 anyhow = "1.0.100"
@@ -12,3 +12,4 @@ rand = "0.8.5"
 regex = "1.10.3"
 walkdir = "2.4.0"
 tempfile = "3.10.0"
+ansi_term = "0.12.1"
