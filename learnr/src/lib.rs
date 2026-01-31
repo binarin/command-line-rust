@@ -1,4 +1,7 @@
-use std::{fs::File, io::{BufRead, BufReader}};
+use std::{
+    fs::File,
+    io::{BufRead, BufReader},
+};
 
 use anyhow::{Result, anyhow};
 
@@ -13,7 +16,7 @@ pub fn open(filename: &CLIInput) -> Result<Box<dyn BufRead>> {
         CLIInput::StdIn => Ok(Box::new(BufReader::new(std::io::stdin()))),
         CLIInput::File(path) => Ok(Box::new(BufReader::new(
             File::open(path).map_err(|err| anyhow!("{}: {err}", path))?,
-        )))
+        ))),
     }
 }
 
@@ -47,7 +50,4 @@ impl clap::builder::TypedValueParser for CLIInputParser {
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
 }
