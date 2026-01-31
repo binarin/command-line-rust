@@ -56,33 +56,31 @@ fn month_arg_parser(arg: &str) -> Result<u32> {
 
 #[cfg(test)]
 mod tests {
+    use assertables::*;
+    use learnr::assert_err_str_contains;
+
     use super::*;
 
     #[test]
     fn test_month_arg_parser() {
         let res = month_arg_parser("1");
-        assert!(res.is_ok());
-        assert_eq!(res.unwrap(), 1u32);
+        assert_ok_eq_x!(res, 1);
+
         let res = month_arg_parser("12");
-        assert!(res.is_ok());
-        assert_eq!(res.unwrap(), 12u32);
+        assert_ok_eq_x!(res, 12);
+
         let res = month_arg_parser("jan");
-        assert!(res.is_ok());
-        assert_eq!(res.unwrap(), 1u32);
+        assert_ok_eq_x!(res, 1);
+
         let res = month_arg_parser("0");
-        assert!(res.is_err());
-        assert_eq!(
-            res.unwrap_err().to_string(),
-            r#"month "0" not in the range 1 through 12"#
-        );
+        assert_err_str_contains!(res, r#"month "0" not in the range 1 through 12"#);
+
         let res = month_arg_parser("13");
-        assert!(res.is_err());
-        assert_eq!(
-            res.unwrap_err().to_string(),
-            r#"month "13" not in the range 1 through 12"#
-        );
+        assert_err_str_contains!(res, r#"month "13" not in the range 1 through 12"#);
+
         let res = month_arg_parser("foo");
-        assert!(res.is_err());
-        assert_eq!(res.unwrap_err().to_string(), r#"Invalid month "foo""#);
+        assert_err_str_contains!(res, r#"Invalid month "foo""#);
+
+        assert_err_str_contains!(month_arg_parser("ju"), "Ambigous");
     }
 }
