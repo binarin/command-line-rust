@@ -29,29 +29,40 @@ fn main() -> Result<()> {
     Ok(())
 }
 
+const MONTH_NAMES: [&str; 12] = [
+    "january",
+    "february",
+    "march",
+    "april",
+    "may",
+    "june",
+    "july",
+    "august",
+    "septemper",
+    "october",
+    "november",
+    "december",
+];
+
 fn month_arg_parser(arg: &str) -> Result<u32> {
     if arg.chars().all(char::is_numeric) {
         let month = arg.parse::<u32>().unwrap();
-        if month == 0 || month > 12 {
-            return Err(anyhow!(r#"month "{arg}" not in the range 1 through 12"#));
+        if (1..=12).contains(&month) {
+            return Ok(month);
         }
-        return Ok(month);
+        return Err(anyhow!(r#"month "{arg}" not in the range 1 through 12"#));
     }
-    Ok(match arg.to_lowercase().as_str() {
-        "jan" => 1,
-        "feb" => 2,
-        "mar" => 3,
-        "apr" => 4,
-        "may" => 5,
-        "jun" => 6,
-        "jul" => 7,
-        "aug" => 8,
-        "sep" => 9,
-        "oct" => 10,
-        "nov" => 11,
-        "dec" => 12,
-        _ => bail!(r#"Invalid month "{arg}""#),
-    })
+
+    let candidates: Vec<(u32, &str)> = (1..=12)
+        .zip(MONTH_NAMES)
+        .filter(|(_, n)| n.starts_with(arg))
+        .collect();
+
+    match candidates.as_slice() {
+        [(idx, _)] => return Ok(*idx),
+        [_, ..] => bail!(r#"Ambigous month name "{arg}""#),
+        [] => bail!(r#"Invalid month "{arg}""#),
+    }
 }
 
 #[cfg(test)]
