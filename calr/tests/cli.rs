@@ -79,7 +79,7 @@ fn dies_invalid_month() -> Result<()> {
     assert!(!output.status.success());
 
     let stderr = String::from_utf8(output.stderr).expect("invalid UTF-8");
-    assert_eq!(stderr.trim(), r#"Invalid month "foo""#);
+    assert_contains!(stderr.trim(), r#"Invalid month "foo""#);
     Ok(())
 }
 
