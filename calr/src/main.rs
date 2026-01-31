@@ -104,7 +104,7 @@ fn format_month(year: i32, month: u32, print_year: bool, today: NaiveDate) -> Ve
     let today_day: u32 = if year == today.year() && month == today.month() {
         today.day()
     } else {
-        std::u32::MAX
+        u32::MAX
     };
 
     let dt = chrono::NaiveDate::from_ymd_opt(year, month, 1).unwrap();
