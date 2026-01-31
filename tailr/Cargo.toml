@@ -16,3 +16,4 @@ predicates.workspace = true
 pretty_assertions.workspace = true
 rand.workspace = true
 assertables.workspace = true
+learnr.workspace = true

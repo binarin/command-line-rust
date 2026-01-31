@@ -184,6 +184,7 @@ fn pick_fortune(fortunes: &[Fortune], seed: Option<u64>) -> Option<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use assertables::*;
 
     #[test]
     fn test_find_files() {
@@ -198,7 +199,7 @@ mod tests {
         );
         // Fails to find a bad file
         let res = find_files(&["/path/does/not/exist".to_string()]);
-        assert!(res.is_err());
+        assert_err!(res);
         // Finds all the input files, excludes ".dat"
         let res = find_files(&["./tests/inputs".to_string()]);
         assert!(res.is_ok());

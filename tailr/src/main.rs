@@ -4,7 +4,7 @@ use std::io::{Read, Seek, SeekFrom, Write};
 use anyhow::{Result, anyhow};
 use clap::Parser;
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 enum Pos {
     FromStart(usize),
     FromEnd(usize),
@@ -277,58 +277,41 @@ fn parse_pos(arg: &str) -> Result<Pos> {
 
 #[cfg(test)]
 mod tests {
+    use assertables::*;
+    use learnr::assert_err_str_contains;
+
     use super::Pos::*;
     use super::*;
-    use assertables::*;
     use std::io::Cursor;
 
     #[test]
     fn test_parse_pos() {
         // no prefix -> from end
-        let res = parse_pos("3");
-        assert!(res.is_ok());
-        assert_eq!(res.unwrap(), FromEnd(3));
+        assert_ok_eq_x!(parse_pos("3"), FromEnd(3));
 
         // leading "+"
-        let res = parse_pos("+3");
-        assert!(res.is_ok());
-        assert_eq!(res.unwrap(), FromStart(2));
+        assert_ok_eq_x!(parse_pos("+3"), FromStart(2));
 
         // An explicit "-" prefix is the same as no prefix
-        let res = parse_pos("-3");
-        assert!(res.is_ok());
-        assert_eq!(res.unwrap(), FromEnd(3));
+        assert_ok_eq_x!(parse_pos("-3"), FromEnd(3));
 
         // Zero is zero
-        let res = parse_pos("0");
-        assert!(res.is_ok());
-        assert_eq!(res.unwrap(), FromEnd(0));
+        assert_ok_eq_x!(parse_pos("0"), FromEnd(0));
 
         // Plus zero is special
-        let res = parse_pos("+0");
-        assert!(res.is_ok());
-        assert_eq!(res.unwrap(), FromStart(0));
+        assert_ok_eq_x!(parse_pos("+0"), FromStart(0));
 
         // Test boundaries
-        let res = parse_pos(format!("+{}", usize::MAX).as_str());
-        assert!(res.is_ok());
-        assert_eq!(res.unwrap(), FromStart(usize::MAX - 1));
+        assert_ok_eq_x!(
+            parse_pos(format!("+{}", usize::MAX).as_str()),
+            FromStart(usize::MAX - 1)
+        );
 
         // A floating-point value is invalid
-        let res = parse_pos("3.14");
-        assert!(res.is_err());
-        assert_contains!(
-            res.unwrap_err().to_string(),
-            "invalid digit found in string"
-        );
+        assert_err_str_contains!(parse_pos("3.14"), "invalid digit found in string");
 
         // Any non-integer string is invalid
-        let res = parse_pos("foo");
-        assert!(res.is_err());
-        assert_contains!(
-            res.unwrap_err().to_string(),
-            "invalid digit found in string"
-        );
+        assert_err_str_contains!(parse_pos("foo"), "invalid digit found in string");
     }
 
     #[test]

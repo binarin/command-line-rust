@@ -205,6 +205,7 @@ mod tests {
     use std::io::Cursor;
 
     use super::*;
+    use assertables::*;
     use rand::{Rng, distributions::Alphanumeric};
     use regex::RegexBuilder;
     #[test]
@@ -263,7 +264,7 @@ mod tests {
         // Verify that the function returns the bad file as an error
         let files = find_files(&[Input::File(bad)], false);
         assert_eq!(files.len(), 1);
-        assert!(files[0].is_err());
+        assert_err!(&files[0]);
     }
 
     #[test]

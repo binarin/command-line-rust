@@ -16,3 +16,4 @@ predicates.workspace = true
 pretty_assertions.workspace = true
 rand.workspace = true
 sys-info = "0.9.1"
+assertables.workspace = true

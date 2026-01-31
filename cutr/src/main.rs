@@ -212,7 +212,9 @@ fn open(filename: &str) -> Result<Box<dyn BufRead>> {
 #[cfg(test)]
 mod tests {
     #![allow(clippy::single_range_in_vec_init)]
+    use assertables::*;
     use csv::StringRecord;
+    use learnr::assert_err_str_contains;
 
     use crate::*;
 
@@ -253,68 +255,41 @@ mod tests {
     #[test]
     fn test_parse_pos_from_book() {
         // The empty string is an error
-        assert!(parse_pos("").is_err());
+        assert_err!(parse_pos(""));
 
         // Zero is an error
-        let res = parse_pos("0");
-        assert!(res.is_err());
-        assert_eq!(res.unwrap_err().to_string(), r#"Should be positive"#);
-
-        let res = parse_pos("0-1");
-        assert!(res.is_err());
-        assert_eq!(res.unwrap_err().to_string(), r#"Should be positive"#);
+        assert_err_str_contains!(parse_pos("0"), r#"Should be positive"#);
+        assert_err_str_contains!(parse_pos("0-1"), r#"Should be positive"#);
 
         // A leading "+" is an error
-        let res = parse_pos("+1");
-        assert!(res.is_err());
-        assert_eq!(res.unwrap_err().to_string(), r#"Invalid char +"#,);
+        assert_err_str_contains!(parse_pos("+1"), r#"Invalid char +"#);
+        assert_err_str_contains!(parse_pos("+1-2"), r#"Invalid char +"#);
+        assert_err_str_contains!(parse_pos("1-+2"), r#"Invalid char +"#);
 
-        let res = parse_pos("+1-2");
-        assert!(res.is_err());
-        assert_eq!(res.unwrap_err().to_string(), r#"Invalid char +"#,);
-
-        let res = parse_pos("1-+2");
-        assert!(res.is_err());
-        assert_eq!(res.unwrap_err().to_string(), r#"Invalid char +"#,);
         // Any non-number is an error
-        let res = parse_pos("a");
-        assert!(res.is_err());
-        assert_eq!(res.unwrap_err().to_string(), r#"Invalid char a"#);
-        let res = parse_pos("1,a");
-        assert!(res.is_err());
-        assert_eq!(res.unwrap_err().to_string(), r#"Invalid char a"#);
-        let res = parse_pos("1-a");
-        assert!(res.is_err());
-        assert_eq!(res.unwrap_err().to_string(), r#"Invalid char a"#,);
-        let res = parse_pos("a-1");
-        assert!(res.is_err());
-        assert_eq!(res.unwrap_err().to_string(), r#"Invalid char a"#,);
+        assert_err_str_contains!(parse_pos("a"), r#"Invalid char a"#);
+        assert_err_str_contains!(parse_pos("1,a"), r#"Invalid char a"#);
+        assert_err_str_contains!(parse_pos("1-a"), r#"Invalid char a"#);
+        assert_err_str_contains!(parse_pos("a-1"), r#"Invalid char a"#);
+
         // Wonky ranges
-        let res = parse_pos("-");
-        assert!(res.is_err());
-        let res = parse_pos(",");
-        assert!(res.is_err());
-        let res = parse_pos("1,");
-        assert!(res.is_err());
-        let res = parse_pos("1-");
-        assert!(res.is_err());
-        let res = parse_pos("1-1-1");
-        assert!(res.is_err());
-        let res = parse_pos("1-1-a");
-        assert!(res.is_err());
+        assert_err!(parse_pos("-"));
+        assert_err!(parse_pos(","));
+        assert_err!(parse_pos("1,"));
+        assert_err!(parse_pos("1-"));
+        assert_err!(parse_pos("1-1-1"));
+        assert_err!(parse_pos("1-1-a"));
+
         // First number must be less than second
-        let res = parse_pos("1-1");
-        assert!(res.is_err());
-        assert_eq!(
-            res.unwrap_err().to_string(),
+        assert_err_str_contains!(
+            parse_pos("1-1"),
             "First number in range (1) must be lower than second number (1)"
         );
-        let res = parse_pos("2-1");
-        assert!(res.is_err());
-        assert_eq!(
-            res.unwrap_err().to_string(),
+        assert_err_str_contains!(
+            parse_pos("2-1"),
             "First number in range (2) must be lower than second number (1)"
         );
+
         // All the following are acceptable
         let res = parse_pos("1");
         assert!(res.is_ok());

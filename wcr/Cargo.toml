@@ -12,3 +12,4 @@ assert_cmd.workspace = true
 predicates.workspace = true
 pretty_assertions.workspace = true
 rand.workspace = true
+assertables.workspace = true

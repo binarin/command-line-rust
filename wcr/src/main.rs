@@ -31,7 +31,7 @@ struct Args {
     chars: bool,
 }
 
-#[derive(Debug, PartialEq, Default)]
+#[derive(Debug, PartialEq, Default, Copy, Clone)]
 struct FileInfo {
     num_lines: usize,
     num_words: usize,
@@ -138,8 +138,9 @@ fn open(filename: &str) -> Result<Box<dyn BufRead>> {
 
 #[cfg(test)]
 mod tests {
+    use assertables::*;
+
     use super::{FileInfo, count};
-    use pretty_assertions::assert_eq;
     use std::io::Cursor;
 
     fn assert_count_string(
@@ -149,15 +150,13 @@ mod tests {
         num_chars: usize,
         num_bytes: usize,
     ) {
-        let info = count(Cursor::new(s));
-        assert!(info.is_ok());
         let expected = FileInfo {
             num_lines,
             num_words,
             num_chars,
             num_bytes,
         };
-        assert_eq!(info.unwrap(), expected);
+        assert_ok_eq_x!(count(Cursor::new(s)), expected);
     }
 
     #[test]
