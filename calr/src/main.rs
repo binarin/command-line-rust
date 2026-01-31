@@ -1,7 +1,7 @@
 use anyhow::{Result, anyhow, bail};
-use chrono::{Datelike, NaiveDate, TimeZone, Weekday};
+use chrono::{Datelike, NaiveDate};
 use clap::Parser;
-use itertools::Itertools;
+use itertools::{Itertools, cons_tuples};
 
 /// Rust version of ‘cal’
 #[derive(Debug, Parser)]
@@ -38,7 +38,40 @@ struct Args {
 
 fn main() -> Result<()> {
     let args = parse_args(&CLIArgs::parse())?;
-    dbg!(args);
+    let today = chrono::Local::now().date_naive();
+
+    match args.period {
+        Period::Month(year, month) => {
+            format_month(year, month, true, today)
+                .into_iter()
+                .for_each(|l| println!("{}", l));
+        }
+        Period::Year(year) => {
+            for (idx, block_lines) in (1..=12)
+                .map(|month| format_month(year, month, false, today))
+                .chunks(3)
+                .into_iter()
+                .map(
+                    |triplet| match triplet.collect::<Vec<Vec<String>>>().as_slice() {
+                        [m1, m2, m3] => cons_tuples(m1.iter().zip(m2).zip(m3))
+                            .map(|(l1, l2, l3)| format!("{l1}{l2}{l3}"))
+                            .collect::<Vec<String>>(),
+                        _ => {
+                            panic!("strange month chunk")
+                        }
+                    },
+                )
+                .enumerate()
+            {
+                if idx == 0 {
+                    println!("{year:>width$}", width = BLOCK_WIDTH * 3 / 2 + 2);
+                } else {
+                    println!();
+                };
+                block_lines.iter().for_each(|l| println!("{l}"));
+            }
+        }
+    }
     Ok(())
 }
 
