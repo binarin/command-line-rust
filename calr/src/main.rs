@@ -146,7 +146,7 @@ const MONTH_NAMES: [&str; 12] = [
     "June",
     "July",
     "August",
-    "Septemper",
+    "September",
     "October",
     "November",
     "December",
