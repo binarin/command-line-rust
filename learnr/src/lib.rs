@@ -50,4 +50,11 @@ impl clap::builder::TypedValueParser for CLIInputParser {
     }
 }
 
+#[macro_export]
+macro_rules! assert_err_str_contains {
+    ($expr:expr, $needle:expr) => {{
+        let res = $expr;
+        assertables::assert_err!(&res);
+        assertables::assert_contains!(res.unwrap_err().to_string(), $needle);
+    }};
 }
