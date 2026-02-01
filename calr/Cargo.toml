@@ -6,9 +6,9 @@ edition = "2024"
 [dependencies]
 ansi_term.workspace = true
 anyhow.workspace = true
-chrono = "0.4.34"
+chrono.workspace = true
 clap.workspace = true
-itertools = "0.12.1"
+itertools.workspace = true
 learnr.workspace = true
 
 [dev-dependencies]

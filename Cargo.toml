@@ -15,3 +15,5 @@ tempfile = "3.10.0"
 ansi_term = "0.12.1"
 assertables = "9.8.4"
 learnr = { path = "./learnr" }
+chrono = "0.4.34"
+itertools = "0.12.1"
