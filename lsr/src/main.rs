@@ -1,5 +1,5 @@
 use std::{
-    fs::{metadata, read_dir, DirEntry},
+    fs::{DirEntry, metadata, read_dir},
     io,
     path::PathBuf,
 };
@@ -65,79 +65,67 @@ fn find_files(paths: &[PathBuf], show_hidden: bool) -> Result<Vec<PathBuf>> {
 mod test {
     use super::*;
     use pretty_assertions::assert_eq;
-    use std::path::PathBuf;
+
+    macro_rules! assert_find_files {
+        ($expected:expr, $show_hidden:expr, $($path:expr),+ $(,)?) => {{
+            let res = find_files(&[$($path.into()),+], $show_hidden);
+            assert!(res.is_ok());
+            let mut filenames: Vec<_> = res
+                .unwrap()
+                .iter()
+                .map(|entry| entry.display().to_string())
+                .collect();
+            filenames.sort();
+            let mut expected = $expected.to_vec();
+            expected.sort();
+            assert_eq!(filenames, expected);
+        }};
+    }
 
     #[test]
-    fn test_find_files() {
-        // Find all non-hidden entries in a directory
-        let res = find_files(&["tests/inputs".into()], false);
-        assert!(res.is_ok());
-        let mut filenames: Vec<_> = res
-            .unwrap()
-            .iter()
-            .map(|entry| entry.display().to_string())
-            .collect();
-        filenames.sort();
-        assert_eq!(
-            filenames,
+    fn test_find_files_nonhidden() {
+        assert_find_files!(
             [
                 "tests/inputs/bustle.txt",
                 "tests/inputs/dir",
                 "tests/inputs/empty.txt",
                 "tests/inputs/fox.txt",
-            ]
-        );
-
-        // Any existing file should be found even if hidden
-        let res = find_files(&["tests/inputs/.hidden".into()], false);
-        assert!(res.is_ok());
-        let filenames: Vec<_> = res
-            .unwrap()
-            .iter()
-            .map(|entry| entry.display().to_string())
-            .collect();
-        assert_eq!(filenames, ["tests/inputs/.hidden"]);
-
-        // Test multiple path arguments
-        let res = find_files(
-            &["tests/inputs/bustle.txt".into(), "tests/inputs/dir".into()],
+            ],
             false,
-        );
-        assert!(res.is_ok());
-        let mut filenames: Vec<_> = res
-            .unwrap()
-            .iter()
-            .map(|entry| entry.display().to_string())
-            .collect();
-        filenames.sort();
-        assert_eq!(
-            filenames,
-            ["tests/inputs/bustle.txt", "tests/inputs/dir/spiders.txt"]
+            "tests/inputs"
         );
     }
 
-    // #[test]
-    // fn test_find_files_hidden() {
-    //     // Find all entries in a directory including hidden
-    //     let res = find_files(&["tests/inputs".to_string()], true);
-    //     assert!(res.is_ok());
-    //     let mut filenames: Vec<_> = res
-    //         .unwrap()
-    //         .iter()
-    //         .map(|entry| entry.display().to_string())
-    //         .collect();
-    //     filenames.sort();
-    //     assert_eq!(
-    //         filenames,
-    //         [
-    //             "tests/inputs/.hidden",
-    //             "tests/inputs/bustle.txt",
-    //             "tests/inputs/dir",
-    //             "tests/inputs/empty.txt",
-    //             "tests/inputs/fox.txt",
-    //         ]
-    //     );
-    // }
+    #[test]
+    fn test_find_files_hidden_explicit() {
+        assert_find_files!(["tests/inputs/.hidden"], false, "tests/inputs/.hidden");
+    }
+
+    #[test]
+    fn test_find_files_multiple_paths() {
+        assert_find_files!(
+            ["tests/inputs/bustle.txt", "tests/inputs/dir/spiders.txt"],
+            false,
+            "tests/inputs/bustle.txt",
+            "tests/inputs/dir"
+        );
+    }
+
+    #[test]
+    fn test_find_files_hidden() {
+        // Find all entries in a directory including hidden
+        assert_find_files!(
+            [
+                "tests/inputs/.hidden",
+                "tests/inputs/bustle.txt",
+                "tests/inputs/dir",
+                "tests/inputs/empty.txt",
+                "tests/inputs/fox.txt",
+            ],
+            true,
+            "tests/inputs",
+        );
+    }
 
     // fn long_match(
     //     line: &str,
