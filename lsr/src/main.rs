@@ -25,7 +25,10 @@ struct CLIArgs {
 
 fn main() -> Result<()> {
     let args = CLIArgs::parse();
-    dbg!(args);
+    let paths = find_files(&args.paths, args.show_hidden)?;
+    for path in paths {
+        println!("{}", path.display());
+    }
     Ok(())
 }
 
