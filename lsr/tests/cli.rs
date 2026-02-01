@@ -51,103 +51,115 @@ fn no_args() -> Result<()> {
 }
 
 // --------------------------------------------------
-fn run_short(arg: &str) -> Result<()> {
-    cargo_bin_cmd!()
-        .arg(arg)
-        .assert()
-        .success()
-        .stdout(format!("{arg}\n"));
-    Ok(())
+macro_rules! run_short {
+    ($arg:expr) => {{
+        let arg = $arg;
+        cargo_bin_cmd!()
+            .arg(arg)
+            .assert()
+            .success()
+            .stdout(format!("{arg}\n"));
+        Ok(())
+    }};
 }
 
 // --------------------------------------------------
-fn run_long(filename: &str, permissions: &str, size: &str) -> Result<()> {
-    let cmd = cargo_bin_cmd!()
-        .args(["--long", filename])
-        .assert()
-        .success();
-    let stdout = String::from_utf8(cmd.get_output().stdout.clone())?;
-    let parts: Vec<_> = stdout.split_whitespace().collect();
-    assert_eq!(parts.first().unwrap(), &permissions);
-    assert_eq!(parts.get(4).unwrap(), &size);
-    assert_eq!(parts.last().unwrap(), &filename);
-    Ok(())
+macro_rules! run_long {
+    ($filename:expr, $permissions:expr, $size:expr) => {{
+        let filename = $filename;
+        let permissions = $permissions;
+        let size = $size;
+        let cmd = cargo_bin_cmd!()
+            .args(["--long", filename])
+            .assert()
+            .success();
+        let stdout = String::from_utf8(cmd.get_output().stdout.clone())
+            .expect("invalid UTF-8");
+        let parts: Vec<_> = stdout.split_whitespace().collect();
+        assert_eq!(parts.first().unwrap(), &permissions);
+        assert_eq!(parts.get(4).unwrap(), &size);
+        assert_eq!(parts.last().unwrap(), &filename);
+        Ok(())
+    }};
 }
 
 // --------------------------------------------------
 #[test]
 fn empty() -> Result<()> {
-    run_short(EMPTY)
+    run_short!(EMPTY)
 }
 
 #[test]
 fn empty_long() -> Result<()> {
-    run_long(EMPTY, "-rw-r--r--", "0")
+    run_long!(EMPTY, "-rw-r--r--", "0")
 }
 
 // --------------------------------------------------
 #[test]
 fn bustle() -> Result<()> {
-    run_short(BUSTLE)
+    run_short!(BUSTLE)
 }
 
 #[test]
 fn bustle_long() -> Result<()> {
-    run_long(BUSTLE, "-rw-r--r--", "193")
+    run_long!(BUSTLE, "-rw-r--r--", "193")
 }
 
 // --------------------------------------------------
 #[test]
 fn fox() -> Result<()> {
-    run_short(FOX)
+    run_short!(FOX)
 }
 
 #[test]
 fn fox_long() -> Result<()> {
-    run_long(FOX, "-rw-------", "45")
+    run_long!(FOX, "-rw-------", "45")
 }
 
 // --------------------------------------------------
 #[test]
 fn hidden() -> Result<()> {
-    run_short(HIDDEN)
+    run_short!(HIDDEN)
 }
 
 #[test]
 fn hidden_long() -> Result<()> {
-    run_long(HIDDEN, "-rw-r--r--", "0")
+    run_long!(HIDDEN, "-rw-r--r--", "0")
 }
 
 // --------------------------------------------------
-fn dir_short(args: &[&str], expected: &[&str]) -> Result<()> {
-    let cmd = cargo_bin_cmd!().args(args).assert().success();
-    let stdout = String::from_utf8(cmd.get_output().stdout.clone())?;
-    let lines: Vec<&str> =
-        stdout.split('\n').filter(|s| !s.is_empty()).collect();
-    assert_eq!(lines.len(), expected.len());
-    for filename in expected {
-        assert!(lines.contains(filename));
-    }
-    Ok(())
+macro_rules! dir_short {
+    ($expected:expr, $($args:expr),* $(,)?) => {{
+        let expected: &[&str] = $expected;
+        let cmd = cargo_bin_cmd!().args([$($args),*]).assert().success();
+        let stdout = String::from_utf8(cmd.get_output().stdout.clone())
+            .expect("invalid UTF-8");
+        let lines: Vec<&str> =
+            stdout.split('\n').filter(|s| !s.is_empty()).collect();
+        assert_eq!(lines.len(), expected.len());
+        for filename in expected {
+            assert!(lines.contains(filename));
+        }
+        Ok(())
+    }};
 }
 
 #[test]
 fn dir1() -> Result<()> {
-    dir_short(
-        &["tests/inputs"],
+    dir_short!(
         &[
             "tests/inputs/empty.txt",
             "tests/inputs/bustle.txt",
             "tests/inputs/fox.txt",
             "tests/inputs/dir",
         ],
+        "tests/inputs"
     )
 }
 
 #[test]
 fn dir1_all() -> Result<()> {
-    dir_short(
-        &["tests/inputs", "--all"],
+    dir_short!(
         &[
             "tests/inputs/empty.txt",
             "tests/inputs/bustle.txt",
@@ -155,68 +167,74 @@ fn dir1_all() -> Result<()> {
             "tests/inputs/.hidden",
             "tests/inputs/dir",
         ],
+        "tests/inputs",
+        "--all"
     )
 }
 
 #[test]
 fn dir2() -> Result<()> {
-    dir_short(&["tests/inputs/dir"], &["tests/inputs/dir/spiders.txt"])
+    dir_short!(&["tests/inputs/dir/spiders.txt"], "tests/inputs/dir")
 }
 
 #[test]
 fn dir2_all() -> Result<()> {
-    dir_short(
-        &["-a", "tests/inputs/dir"],
+    dir_short!(
         &["tests/inputs/dir/spiders.txt", "tests/inputs/dir/.gitkeep"],
+        "-a",
+        "tests/inputs/dir"
     )
 }
 
 // --------------------------------------------------
-#[allow(suspicious_double_ref_op)]
-fn dir_long(args: &[&str], expected: &[(&str, &str, &str)]) -> Result<()> {
-    let cmd = cargo_bin_cmd!().args(args).assert().success();
-    let stdout = String::from_utf8(cmd.get_output().stdout.clone())?;
-    let lines: Vec<&str> =
-        stdout.split('\n').filter(|s| !s.is_empty()).collect();
-    assert_eq!(lines.len(), expected.len());
+macro_rules! dir_long {
+    ($expected:expr, $($args:expr),* $(,)?) => {{
+        let expected: &[(&str, &str, &str)] = $expected;
+        let cmd = cargo_bin_cmd!().args([$($args),*]).assert().success();
+        let stdout = String::from_utf8(cmd.get_output().stdout.clone())
+            .expect("invalid UTF-8");
+        let lines: Vec<&str> =
+            stdout.split('\n').filter(|s| !s.is_empty()).collect();
+        assert_eq!(lines.len(), expected.len());
 
-    let mut check = vec![];
-    for line in lines {
-        let parts: Vec<&str> = line.split_whitespace().collect();
-        let path = parts.last().unwrap().clone();
-        let permissions = parts.first().unwrap().clone();
-        let size = match permissions.chars().next() {
-            Some('d') => "",
-            _ => parts.get(4).unwrap().clone(),
-        };
-        check.push((path, permissions, size));
-    }
+        let mut check = vec![];
+        for line in lines {
+            let parts: Vec<&str> = line.split_whitespace().collect();
+            let path = *parts.last().unwrap();
+            let permissions = *parts.first().unwrap();
+            let size = match permissions.chars().next() {
+                Some('d') => "",
+                _ => *parts.get(4).unwrap(),
+            };
+            check.push((path, permissions, size));
+        }
 
-    for entry in expected {
-        assert!(check.contains(entry));
-    }
+        for entry in expected {
+            assert!(check.contains(entry));
+        }
 
-    Ok(())
+        Ok(())
+    }};
 }
 
 // --------------------------------------------------
 #[test]
 fn dir1_long() -> Result<()> {
-    dir_long(
-        &["-l", "tests/inputs"],
+    dir_long!(
         &[
             ("tests/inputs/empty.txt", "-rw-r--r--", "0"),
             ("tests/inputs/bustle.txt", "-rw-r--r--", "193"),
             ("tests/inputs/fox.txt", "-rw-------", "45"),
             ("tests/inputs/dir", "drwxr-xr-x", ""),
         ],
+        "-l",
+        "tests/inputs"
     )
 }
 
 #[test]
 fn dir1_long_all() -> Result<()> {
-    dir_long(
-        &["-la", "tests/inputs"],
+    dir_long!(
         &[
             ("tests/inputs/empty.txt", "-rw-r--r--", "0"),
             ("tests/inputs/bustle.txt", "-rw-r--r--", "193"),
@@ -224,24 +242,29 @@ fn dir1_long_all() -> Result<()> {
             ("tests/inputs/dir", "drwxr-xr-x", ""),
             ("tests/inputs/.hidden", "-rw-r--r--", "0"),
         ],
+        "-la",
+        "tests/inputs"
     )
 }
 
 #[test]
 fn dir2_long() -> Result<()> {
-    dir_long(
-        &["--long", "tests/inputs/dir"],
+    dir_long!(
         &[("tests/inputs/dir/spiders.txt", "-rw-r--r--", "45")],
+        "--long",
+        "tests/inputs/dir"
     )
 }
 
 #[test]
 fn dir2_long_all() -> Result<()> {
-    dir_long(
-        &["tests/inputs/dir", "--long", "--all"],
+    dir_long!(
         &[
             ("tests/inputs/dir/spiders.txt", "-rw-r--r--", "45"),
             ("tests/inputs/dir/.gitkeep", "-rw-r--r--", "0"),
         ],
+        "tests/inputs/dir",
+        "--long",
+        "--all"
     )
 }
