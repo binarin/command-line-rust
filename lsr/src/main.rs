@@ -8,7 +8,7 @@ use clap::Parser;
 #[command(author, about, version)]
 struct CLIArgs {
     #[arg(value_name = "PATH", default_value = ".")]
-    paths: Vec<String>,
+    paths: Vec<PathBuf>,
 
     /// Long listing
     #[arg(short, long)]
@@ -25,7 +25,7 @@ fn main() -> Result<()> {
     Ok(())
 }
 
-fn find_files(paths: &[String], show_hidden: bool) -> Result<Vec<PathBuf>> {
+fn find_files(paths: &[PathBuf], show_hidden: bool) -> Result<Vec<PathBuf>> {
     todo!()
 }
 
@@ -39,7 +39,7 @@ mod test {
     #[test]
     fn test_find_files() {
         // Find all non-hidden entries in a directory
-        let res = find_files(&["tests/inputs".to_string()], false);
+        let res = find_files(&["tests/inputs".into()], false);
         assert!(res.is_ok());
         let mut filenames: Vec<_> = res
             .unwrap()
@@ -58,7 +58,7 @@ mod test {
         );
 
         // Any existing file should be found even if hidden
-        let res = find_files(&["tests/inputs/.hidden".to_string()], false);
+        let res = find_files(&["tests/inputs/.hidden".into()], false);
         assert!(res.is_ok());
         let filenames: Vec<_> = res
             .unwrap()
@@ -69,10 +69,7 @@ mod test {
 
         // Test multiple path arguments
         let res = find_files(
-            &[
-                "tests/inputs/bustle.txt".to_string(),
-                "tests/inputs/dir".to_string(),
-            ],
+            &["tests/inputs/bustle.txt".into(), "tests/inputs/dir".into()],
             false,
         );
         assert!(res.is_ok());
