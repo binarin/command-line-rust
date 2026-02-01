@@ -2,7 +2,7 @@ use anyhow::Result;
 use assert_cmd::cargo::cargo_bin_cmd;
 use predicates::prelude::*;
 use pretty_assertions::assert_eq;
-use rand::{distributions::Alphanumeric, Rng};
+use rand::{Rng, distributions::Alphanumeric};
 use std::fs;
 
 const HIDDEN: &str = "tests/inputs/.hidden";
@@ -29,8 +29,7 @@ fn gen_bad_file() -> String {
 #[test]
 fn bad_file() -> Result<()> {
     let bad = gen_bad_file();
-    let expected =
-        format!("{}: No such file or directory (os error 2)", &bad);
+    let expected = format!("{}: No such file or directory (os error 2)", &bad);
     cargo_bin_cmd!()
         .arg(&bad)
         .assert()
@@ -73,8 +72,7 @@ macro_rules! run_long {
             .args(["--long", filename])
             .assert()
             .success();
-        let stdout = String::from_utf8(cmd.get_output().stdout.clone())
-            .expect("invalid UTF-8");
+        let stdout = String::from_utf8(cmd.get_output().stdout.clone()).expect("invalid UTF-8");
         let parts: Vec<_> = stdout.split_whitespace().collect();
         assert_eq!(parts.first().unwrap(), &permissions);
         assert_eq!(parts.get(4).unwrap(), &size);
