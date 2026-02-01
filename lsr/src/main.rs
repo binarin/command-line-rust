@@ -1,4 +1,8 @@
-use std::path::PathBuf;
+use std::{
+    fs::{metadata, read_dir, DirEntry},
+    io,
+    path::PathBuf,
+};
 
 use anyhow::Result;
 use clap::Parser;
@@ -26,7 +30,34 @@ fn main() -> Result<()> {
 }
 
 fn find_files(paths: &[PathBuf], show_hidden: bool) -> Result<Vec<PathBuf>> {
-    todo!()
+    let mut result = vec![];
+
+    for path in paths {
+        let process_dir_entry = |rde: Result<DirEntry, io::Error>| -> Option<PathBuf> {
+            rde.map_or(None, |de| {
+                if de.file_name().as_encoded_bytes().starts_with(&[b'.']) && !show_hidden {
+                    return None;
+                }
+                Some(de.path())
+            })
+        };
+
+        match metadata(path) {
+            Ok(meta) => {
+                if meta.file_type().is_dir() {
+                    match read_dir(path) {
+                        Ok(entries) => result.extend(entries.filter_map(process_dir_entry)),
+                        Err(e) => eprintln!("ls: {}: {e}", path.display()),
+                    }
+                } else {
+                    result.push(path.to_path_buf());
+                }
+            }
+            Err(e) => eprintln!("ls: {}: {e}", path.display()),
+        }
+    }
+
+    Ok(result)
 }
 
 // --------------------------------------------------
