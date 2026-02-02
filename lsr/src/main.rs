@@ -45,7 +45,7 @@ fn find_files(paths: &[PathBuf], show_hidden: bool) -> Result<Vec<PathBuf>> {
     for path in paths {
         let process_dir_entry = |rde: Result<DirEntry, io::Error>| -> Option<PathBuf> {
             rde.map_or(None, |de| {
-                if de.file_name().as_encoded_bytes().starts_with(&[b'.']) && !show_hidden {
+                if de.file_name().as_encoded_bytes().starts_with(b".") && !show_hidden {
                     return None;
                 }
                 Some(de.path())
