@@ -1,11 +1,14 @@
 use std::{
     fs::{DirEntry, metadata, read_dir},
     io,
+    os::unix::fs::{MetadataExt, PermissionsExt},
     path::PathBuf,
 };
 
 use anyhow::Result;
+use chrono::Local;
 use clap::Parser;
+use tabular::{Row, Table};
 
 /// Rust version of ’ls’
 #[derive(Debug, Parser)]
@@ -26,8 +29,12 @@ struct CLIArgs {
 fn main() -> Result<()> {
     let args = CLIArgs::parse();
     let paths = find_files(&args.paths, args.show_hidden)?;
-    for path in paths {
-        println!("{}", path.display());
+    if args.long {
+        println!("{}", format_output(&paths)?);
+    } else {
+        for path in paths {
+            println!("{}", path.display());
+        }
     }
     Ok(())
 }
@@ -61,6 +68,74 @@ fn find_files(paths: &[PathBuf], show_hidden: bool) -> Result<Vec<PathBuf>> {
     }
 
     Ok(result)
+}
+
+fn format_output(paths: &[PathBuf]) -> Result<String> {
+    let fmt = "{:<}{:<}  {:>}  {:<}  {:<}  {:>}  {:<}  {:<}";
+    let mut table = Table::new(fmt);
+    for path in paths {
+        let metadata = match metadata(path) {
+            Ok(md) => md,
+            Err(err) => {
+                eprintln!("{path}: {err}", path = path.display());
+                continue;
+            }
+        };
+
+        let uid = metadata.uid();
+        let username = users::get_user_by_uid(uid)
+            .map(|name| name.name().to_string_lossy().into_owned())
+            .unwrap_or_else(|| uid.to_string());
+
+        let gid = metadata.uid();
+        let group: String = if let Some(name) = users::get_group_by_gid(gid) {
+            name.name().to_string_lossy().to_string()
+        } else {
+            format!("{gid}")
+        };
+
+        let modified: String = match metadata.modified() {
+            Ok(modified) => chrono::DateTime::<Local>::from(modified)
+                .format("%Y-%m-%d %H:%M:%S")
+                .to_string(),
+            Err(err) => {
+                eprintln!("{}: {err}", path.display());
+                continue;
+            }
+        };
+
+        table.add_row(
+            Row::new()
+                .with_cell(if metadata.is_dir() { "d" } else { "-" })
+                .with_cell(format_permissions(&metadata))
+                .with_cell(metadata.nlink())
+                .with_cell(username)
+                .with_cell(group)
+                .with_cell(metadata.size())
+                .with_cell(modified)
+                .with_cell(path.display()),
+        );
+    }
+    Ok(format!("{table}"))
+}
+
+fn format_permissions(metadata: &std::fs::Metadata) -> String {
+    let mut bits: Vec<bool> = vec![];
+    let mut mode = metadata.permissions().mode();
+    while bits.len() < 9 {
+        bits.push(mode % 2 == 1);
+        mode /= 2;
+    }
+
+    let bit_strs = ['x', 'w', 'r'].into_iter().cycle().take(9);
+    let permission_str: String = bits
+        .iter()
+        .zip(bit_strs)
+        .map(|(bit, repr)| if *bit { repr } else { '-' })
+        .collect();
+
+    let permission_str: String = permission_str.chars().rev().collect();
+    permission_str
 }
 
 // --------------------------------------------------
@@ -130,69 +205,67 @@ mod test {
         );
     }
 
-    // fn long_match(
-    //     line: &str,
-    //     expected_name: &str,
-    //     expected_perms: &str,
-    //     expected_size: Option<&str>,
-    // ) {
-    //     let parts: Vec<_> = line.split_whitespace().collect();
-    //     assert!(!parts.is_empty() && parts.len() <= 10);
+    fn long_match(
+        line: &str,
+        expected_name: &str,
+        expected_perms: &str,
+        expected_size: Option<&str>,
+    ) {
+        let parts: Vec<_> = line.split_whitespace().collect();
+        assert!(!parts.is_empty() && parts.len() <= 10);
 
-    //     let perms = parts.first().unwrap();
-    //     assert_eq!(perms, &expected_perms);
+        let perms = parts.first().unwrap();
+        assert_eq!(perms, &expected_perms);
 
-    //     if let Some(size) = expected_size {
-    //         let file_size = parts.get(4).unwrap();
-    //         assert_eq!(file_size, &size);
-    //     }
+        if let Some(size) = expected_size {
+            let file_size = parts.get(4).unwrap();
+            assert_eq!(file_size, &size);
+        }
 
-    //     let display_name = parts.last().unwrap();
-    //     assert_eq!(display_name, &expected_name);
-    // }
+        let display_name = parts.last().unwrap();
+        assert_eq!(display_name, &expected_name);
+    }
 
-    // #[test]
-    // fn test_format_output_one() {
-    //     let bustle_path = "tests/inputs/bustle.txt";
-    //     let bustle = PathBuf::from(bustle_path);
+    #[test]
+    fn test_format_output_one() {
+        let bustle_path = "tests/inputs/bustle.txt";
+        let bustle = PathBuf::from(bustle_path);
 
-    //     let res = format_output(&[bustle]);
-    //     assert!(res.is_ok());
+        let res = format_output(&[bustle]);
+        assert!(res.is_ok());
 
-    //     let out = res.unwrap();
-    //     let lines: Vec<&str> =
-    //         out.split('\n').filter(|s| !s.is_empty()).collect();
-    //     assert_eq!(lines.len(), 1);
+        let out = res.unwrap();
+        let lines: Vec<&str> = out.split('\n').filter(|s| !s.is_empty()).collect();
+        assert_eq!(lines.len(), 1);
 
-    //     let line1 = lines.first().unwrap();
-    //     long_match(line1, bustle_path, "-rw-r--r--", Some("193"));
-    // }
+        let line1 = lines.first().unwrap();
+        long_match(line1, bustle_path, "-rw-r--r--", Some("193"));
+    }
 
-    // #[test]
-    // fn test_format_output_two() {
-    //     let res = format_output(&[
-    //         PathBuf::from("tests/inputs/dir"),
-    //         PathBuf::from("tests/inputs/empty.txt"),
-    //     ]);
-    //     assert!(res.is_ok());
+    #[test]
+    fn test_format_output_two() {
+        let res = format_output(&[
+            PathBuf::from("tests/inputs/dir"),
+            PathBuf::from("tests/inputs/empty.txt"),
+        ]);
+        assert!(res.is_ok());
 
-    //     let out = res.unwrap();
-    //     let mut lines: Vec<&str> =
-    //         out.split('\n').filter(|s| !s.is_empty()).collect();
-    //     lines.sort();
-    //     assert_eq!(lines.len(), 2);
+        let out = res.unwrap();
+        let mut lines: Vec<&str> = out.split('\n').filter(|s| !s.is_empty()).collect();
+        lines.sort();
+        assert_eq!(lines.len(), 2);
 
-    //     let empty_line = lines.remove(0);
-    //     long_match(
-    //         empty_line,
-    //         "tests/inputs/empty.txt",
-    //         "-rw-r--r--",
-    //         Some("0"),
-    //     );
+        let empty_line = lines.remove(0);
+        long_match(
+            empty_line,
+            "tests/inputs/empty.txt",
+            "-rw-r--r--",
+            Some("0"),
+        );
 
-    //     let dir_line = lines.remove(0);
-    //     long_match(dir_line, "tests/inputs/dir", "drwxr-xr-x", None);
-    // }
+        let dir_line = lines.remove(0);
+        long_match(dir_line, "tests/inputs/dir", "drwxr-xr-x", None);
+    }
 
     // #[test]
     // fn test_mk_triple() {
